@@ -11,7 +11,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, slipBusy: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -54,7 +54,7 @@
 
   // ---------- LIFF / API (มีโหมดจำลอง ?mock=1) ----------
   var L = window.liff;
-  var mockDb = { registered: params.get('registered') === '1', orders: [], member: 'P2P-N00000' };
+  var mockDb = { registered: params.get('registered') === '1', orders: [], member: 'P2P-N00000', slip: {} };
   if (MOCK) {
     L = {
       init: function () { return Promise.resolve(); }, isLoggedIn: function () { return true; }, login: function () {},
@@ -80,7 +80,10 @@
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์' }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
-        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false }, round2: null }] };
+        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
+    } else if (p.action === 'uploadSlip') {
+      if (params.get('slipfail') === '1') res = { ok: false, error: 'server_error', message: 'x' };
+      else { mockDb.slip[p.round] = new Date().toISOString(); res = { ok: true, slipAt: mockDb.slip[p.round] }; }
     } else if (p.action === 'cancelOrder') {
       var n = 0;
       mockDb.orders.forEach(function (l) { if (l.productId === p.productId && l.option === p.option && (l.status || 'รับออเดอร์') === 'รับออเดอร์') { l.status = 'ยกเลิก'; n++; } });
@@ -229,7 +232,8 @@
       if (!S.myTab) S.myTab = counts.pay > 0 ? 'pay' : counts.new > 0 ? 'new' : counts.ship > 0 ? 'ship' : counts.inbound > 0 ? 'inbound' : 'all';
       var labelOf = {}; ORDER_TABS.forEach(function (t) { labelOf[t.key] = t.label; });
       var dueSatang = 0;
-      d.billing.forEach(function (b) { [b.round1, b.round2].forEach(function (r) { if (r && !r.paid) dueSatang += r.totalSatang; }); });
+      var waitingCheck = false;
+      d.billing.forEach(function (b) { [b.round1, b.round2].forEach(function (r) { if (r && !r.paid) { if (r.slipAt) waitingCheck = true; else dueSatang += r.totalSatang; } }); });
       var ICONS = {
         pay: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 9h20a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9zm0 0 16-5v5M21 19h6v-4h-6a2 2 0 0 0 0 4z"/></svg>',
         new: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 5h14a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm3 7h8M12 17h8M12 22h5"/></svg>',
@@ -239,7 +243,7 @@
       function tile(k, big) {
         return '<button type="button" role="tab" class="tile' + (big ? ' tile-pay' : '') + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' +
           '<span class="tile-ico">' + ICONS[k] + (counts[k] ? '<span class="tile-n">' + counts[k] + '</span>' : '') + '</span>' +
-          '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : '') + '</span></button>';
+          '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : big && waitingCheck ? '<span class="tile-sub">แจ้งโอนแล้ว · รอร้านตรวจสอบ</span>' : '') + '</span></button>';
       }
       var moreOpen = S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0;
       html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + '</button></div>' +
@@ -258,8 +262,18 @@
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
-          [['รอบ 1', b.round1], ['รอบ 2', b.round2]].forEach(function (x) {
-            if (x[1]) html += '<div class="my-order"><span>' + x[0] + ' ยอดที่ต้องโอน ' + baht(x[1].totalSatang) + '</span><span class="badge' + (x[1].paid ? ' ok' : '') + '">' + (x[1].paid ? 'จ่ายแล้ว' : 'รอชำระ') + '</span></div>';
+          [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
+            var r = x[1];
+            if (!r) return;
+            var sk = code + '|' + x[2];
+            var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
+            html += '<div class="my-order"><span>' + x[0] + ' ยอดที่ต้องโอน ' + baht(r.totalSatang) + '</span>' + badge + '</div>';
+            if (!r.paid) {
+              var busy = S.slipBusy === sk;
+              html += '<div class="slip-row">' + (r.slipAt ? '<span class="small muted">ส่งสลิปแล้ว ' + esc(closeText(r.slipAt)) + ' · รอร้านตรวจสอบ</span>' : '<span class="small muted">โอนแล้วแนบสลิปได้ที่นี่</span>') +
+                '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : (r.slipAt ? 'ส่งสลิปใหม่' : '📎 แนบสลิป')) +
+                '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label></div>';
+            }
           });
           html += '</div>';
         }
@@ -411,10 +425,63 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.className = ''; }, 2600);
   }
 
+  // ย่อรูปสลิปเป็น JPEG ด้านยาวไม่เกิน 1400px ให้ base64 ไม่เกิน ~1.2MB (ส่งผ่าน Apps Script ได้เร็วและเก็บใน Drive ไม่หนัก)
+  function slipToJpegBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var scale = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        var q = 0.85, out = '';
+        for (var i = 0; i < 5; i++) {
+          out = c.toDataURL('image/jpeg', q).split(',')[1] || '';
+          if (out.length <= 1200000) break;
+          q -= 0.15;
+        }
+        if (!out || out.length > 1400000) return reject(new Error('too_big'));
+        resolve(out);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('bad_image')); };
+      img.src = url;
+    });
+  }
+
+  function sendSlip(sk, file) {
+    var parts = sk.split('|');
+    S.slipBusy = sk; S.error = ''; keepScroll();
+    slipToJpegBase64(file).then(function (b64) {
+      return api('uploadSlip', { preorderCode: parts[0], round: Number(parts[1]), image: b64 });
+    }).then(function (res) {
+      if (!res.ok) throw new Error(res.message || 'upload_failed');
+      toast('ส่งสลิปแล้ว ✓ ร้านจะตรวจสอบ');
+      return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
+    }).catch(function (e) {
+      S.error = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'ส่งสลิปไม่สำเร็จ ลองใหม่อีกครั้ง';
+    }).then(function () { S.slipBusy = ''; keepScroll(); });
+  }
+
+  app.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t && t.matches && t.matches('input[data-slip]') && t.files && t.files[0]) sendSlip(t.getAttribute('data-slip'), t.files[0]);
+  });
+
   function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
+
+  // ลิงก์จากข้อความแจ้งยอด (?page=my) เปิดหน้า "ออเดอร์ของฉัน" ตรงๆ; LIFF อาจห่อพารามิเตอร์ไว้ใน liff.state
+  function wantsMyPage() {
+    var q = new URLSearchParams(location.search);
+    var st = q.get('liff.state');
+    if (st && new URLSearchParams(st.replace(/^\?/, '')).get('page') === 'my') return true;
+    return q.get('page') === 'my';
+  }
 
   function gateAfterBootstrap(registered) {
     if (!S.friend) return setScreen('friend');
+    if (registered && wantsMyPage()) return showMy();
     setScreen(registered ? 'order' : 'register');
     if (registered) refreshTotal();
   }

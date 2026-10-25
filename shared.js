@@ -32,3 +32,11 @@ function normalizeImageUrl(raw) {
   return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w800' : s;
 }
 
+// วันที่+เวลาแบบไทย เวลาไทย (UTC+7) เช่น 26 ต.ค. 2569 เวลา 14:30 น.
+function formatThaiDateTime(date) {
+  var d = new Date(date.getTime() + 7 * 3600000);
+  var hh = String(d.getUTCHours()).padStart(2, '0');
+  var mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return formatThaiDate(date) + ' เวลา ' + hh + ':' + mm + ' น.';
+}
+

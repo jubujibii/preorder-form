@@ -189,3 +189,16 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 .chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
 .chip.active { background: var(--teal); border-color: var(--teal); color: #fff; font-weight: 600; }
 .chip.active .tab-n { background: rgba(255,255,255,.28); }
+
+.tiles { grid-template-columns: repeat(4, 1fr); }
+.tile-admin .tile-ico svg { stroke: var(--teal-dark); }
+.tile-admin .tile-label { color: var(--teal-dark); font-weight: 600; }
+.tiles .tile { padding: 8px 0; min-width: 0; }
+.tiles .tile-label { font-size: 12px; white-space: nowrap; }
+
+.tiles { grid-template-columns: repeat(3, 1fr); }
+.tiles .tile-label { font-size: 13px; }
+.admin-btn { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--teal-dark); border-color: var(--teal-dark); background: transparent; margin-top: 10px; }
+.admin-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.line-actions { justify-content: space-between; }
+.line-actions .danger-link { margin-left: auto; }

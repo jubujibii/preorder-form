@@ -4,6 +4,7 @@
   var params = new URLSearchParams(location.search);
   var MOCK = params.get('mock') === '1';
   var OA_URL = 'https://line.me/R/ti/p/@841hdioo';
+  var OA_ID = '@841hdioo';
   var MAX_QTY = 99;
   var app = document.getElementById('app');
   var memberEl = document.getElementById('member');
@@ -116,6 +117,11 @@
   function errBanner() {
     return S.error ? '<div class="notice bad" role="alert">' + esc(S.error) + '</div>' : '';
   }
+
+  function adminBtn() {
+    return '<button type="button" class="btn block admin-btn" data-act="admin">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></button>';
+  }
+  var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
   var SCREENS = {
     loading: function () { return '<p class="center muted">กำลังโหลด…</p>'; },
@@ -238,7 +244,7 @@
           return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (counts[k] && k !== 'all' ? '<span class="tab-n">' + counts[k] + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
-      if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>';
+      if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>' + adminBtn();
       var codes = [];
       shown.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });
       codes.forEach(function (code) {
@@ -271,7 +277,7 @@
         });
         html += '</details>';
       });
-      return html + '<button class="btn block" data-act="more">กลับไปสั่งของ</button>';
+      return html + '<button class="btn block" data-act="more">กลับไปสั่งของ</button>' + adminBtn();
     },
   };
 
@@ -447,6 +453,12 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'admin') {
+      var unpaidNos = S.my ? S.my.billing.filter(function (b) { return (b.round1 && !b.round1.paid) || (b.round2 && !b.round2.paid); }).map(function (b) { return b.orderNo; }) : [];
+      var nos = unpaidNos.length ? unpaidNos : (S.my ? S.my.billing.map(function (b) { return b.orderNo; }) : []);
+      var url = adminChatUrl(OA_ID, S.memberCode, nos.slice(0, 3));
+      if (L && L.openWindow) L.openWindow({ url: url, external: false }); else window.open(url, '_blank');
+    }
     else if (act === 'more-tabs') { S.myMore = !(S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0); keepScroll(); }
     else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }

@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -216,10 +216,27 @@
       if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var merged = mergeOrderLines(d.orders);
       var counts = tabCounts(merged, d.billing);
-      if (!S.myTab) S.myTab = counts.pay > 0 ? 'pay' : 'all';
-      html += '<div class="tabs" role="tablist">' + ORDER_TABS.map(function (t) {
-        return '<button type="button" role="tab" class="tab' + (S.myTab === t.key ? ' active' : '') + '" aria-selected="' + (S.myTab === t.key) + '" data-act="tab" data-tab="' + t.key + '">' + esc(t.label) + (counts[t.key] ? '<span class="tab-n">' + counts[t.key] + '</span>' : '') + '</button>';
-      }).join('') + '</div>';
+      if (!S.myTab) S.myTab = counts.pay > 0 ? 'pay' : counts.new > 0 ? 'new' : counts.ship > 0 ? 'ship' : counts.inbound > 0 ? 'inbound' : 'all';
+      var labelOf = {}; ORDER_TABS.forEach(function (t) { labelOf[t.key] = t.label; });
+      var dueSatang = 0;
+      d.billing.forEach(function (b) { [b.round1, b.round2].forEach(function (r) { if (r && !r.paid) dueSatang += r.totalSatang; }); });
+      var ICONS = {
+        pay: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 9h20a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9zm0 0 16-5v5M21 19h6v-4h-6a2 2 0 0 0 0 4z"/></svg>',
+        new: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 5h14a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm3 7h8M12 17h8M12 22h5"/></svg>',
+        ship: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 11 16 5l12 6v12l-12 6-12-6V11zm0 0 12 6m0 12V17m12-6-12 6M10 8l12 6"/></svg>',
+        inbound: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 7h16v15H3zM19 12h6l4 5v5h-10zM9 25a2.5 2.5 0 1 0 0-.01zM24 25a2.5 2.5 0 1 0 0-.01z"/></svg>',
+      };
+      function tile(k, big) {
+        return '<button type="button" role="tab" class="tile' + (big ? ' tile-pay' : '') + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' +
+          '<span class="tile-ico">' + ICONS[k] + (counts[k] ? '<span class="tile-n">' + counts[k] + '</span>' : '') + '</span>' +
+          '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : '') + '</span></button>';
+      }
+      var moreOpen = S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0;
+      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + '</button></div>' +
+        '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
+        (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
+          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (counts[k] && k !== 'all' ? '<span class="tab-n">' + counts[k] + '</span>' : '') + '</button>';
+        }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
       if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>';
       var codes = [];
@@ -345,7 +362,7 @@
   }
 
   function showMy() {
-    S.my = null; S.myTab = ''; S.edit = null; S.confirmCancel = ''; setScreen('my');
+    S.my = null; S.myTab = ''; S.myMore = false; S.edit = null; S.confirmCancel = ''; setScreen('my');
     api('myOrders').then(function (res) {
       if (!res.ok) throw new Error();
       S.my = res; render();
@@ -430,6 +447,7 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'more-tabs') { S.myMore = !(S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0); keepScroll(); }
     else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }

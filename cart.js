@@ -31,6 +31,9 @@ var ORDER_TABS = [
   { key: 'ship', label: 'ที่ต้องจัดส่ง' }, { key: 'inbound', label: 'ที่ต้องได้รับ' }, { key: 'done', label: 'สำเร็จ' },
   { key: 'refund', label: 'คืนเงิน' }, { key: 'cancel', label: 'ยกเลิก' },
 ];
+// 4 แท็บหลักแสดงเป็นไอคอนด้านบน (ที่ต้องชำระเด่นสุด); ที่เหลือซ่อนไว้ใต้ "ดูเพิ่มเติม"
+var MAIN_TAB_KEYS = ['pay', 'new', 'ship', 'inbound'];
+var MORE_TAB_KEYS = ['all', 'done', 'refund', 'cancel'];
 var ORDER_TAB_BY_STATUS = {
   'รับออเดอร์': 'new', 'สั่งของแล้ว': 'ship', 'ถึงไทย': 'ship', 'แพ็กแล้ว': 'ship',
   'ส่งแล้ว': 'inbound', 'สำเร็จ': 'done', 'คืนเงิน': 'refund', 'ยกเลิก': 'cancel',

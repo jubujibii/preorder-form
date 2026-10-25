@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -76,10 +76,19 @@
     else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
     else if (p.action === 'placeOrder') {
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
-      else { mockDb.orders = mockDb.orders.concat(p.lines); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
+      else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์' }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
-      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: 'รับออเดอร์' }; }),
+      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false }, round2: null }] };
+    } else if (p.action === 'cancelOrder') {
+      var n = 0;
+      mockDb.orders.forEach(function (l) { if (l.productId === p.productId && l.option === p.option && (l.status || 'รับออเดอร์') === 'รับออเดอร์') { l.status = 'ยกเลิก'; n++; } });
+      res = { ok: true, cancelled: n };
+    } else if (p.action === 'reduceOrder') {
+      var lines = mockDb.orders.filter(function (l) { return l.productId === p.productId && l.option === p.option && (l.status || 'รับออเดอร์') === 'รับออเดอร์'; });
+      var cur = lines.reduce(function (n, l) { return n + l.qty; }, 0), left = Math.max(0, cur - p.qty);
+      for (var i = lines.length - 1; i >= 0 && left > 0; i--) { if (lines[i].qty <= left) { left -= lines[i].qty; lines[i].status = 'ยกเลิก'; } else { lines[i].qty -= left; left = 0; } }
+      res = { ok: true, removed: Math.max(0, cur - p.qty), qty: Math.min(cur, p.qty) };
     } else res = { ok: false, error: 'bad_request', message: 'x' };
     return new Promise(function (r) { setTimeout(function () { r(res); }, 150); });
   }
@@ -156,7 +165,7 @@
       var html = '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<div class="callout" role="note"><strong>ยอดด้านล่างคือ "ค่าสินค้า" เท่านั้น</strong>' +
-        '<p>ยังไม่รวม <b>ค่าส่งจากจีน · ค่านำเข้า · ค่าบริการ · ค่าส่งในไทย</b> ร้านจะแจ้งยอดที่ต้องโอนให้ทางแชท LINE ในภายหลัง</p></div>' + errBanner();
+        '<p>ยังไม่รวม <b>ค่าส่งจากจีน · ค่านำเข้า · ค่าส่งในไทย</b> ร้านจะแจ้งยอดที่ต้องโอนให้ทางแชท LINE ในวันที่ปิดพรี</p></div>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
       groups.sort(function (a, b) {
         var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();
@@ -219,7 +228,18 @@
           html += '</div>';
         }
         mine.forEach(function (o) {
-          html += '<div class="my-order"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
+          var ck = qtyKey(o.productId, o.option);
+          html += '<div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
+          if (o.canCancel && S.edit && S.edit.k === ck) {
+            html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
+              '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>บันทึก</button><button type="button" class="btn" data-act="edit-cancel">ปิด</button></div>' +
+              '<p class="small muted">แก้ได้เฉพาะลดจำนวน ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</p></div>';
+          } else if (o.canCancel) {
+            if (o.qty > 1 && S.confirmCancel !== ck) html += '<button type="button" class="linkbtn" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '">ลดจำนวน</button> ';
+            html += S.confirmCancel === ck
+              ? '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>ยืนยันยกเลิก</button><button type="button" class="btn" data-act="cancel-no">ไม่ยกเลิก</button></div>'
+              : '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิกรายการนี้</button>';
+          }
         });
         html += '</details>';
       });
@@ -321,6 +341,32 @@
     }).catch(function () { S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง'; S.my = { orders: [], billing: [] }; render(); });
   }
 
+  function cancelLine(k) {
+    var parts = k.split('\u0001');
+    S.busy = true; S.error = ''; render();
+    api('cancelOrder', { productId: parts[0], option: parts[1] || '' }).then(function (res) {
+      S.busy = false; S.confirmCancel = '';
+      if (!res.ok) { S.error = res.message || 'ยกเลิกไม่สำเร็จ ลองใหม่อีกครั้ง'; }
+      return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
+    }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; }).then(function () {
+      var y = window.scrollY; render(); window.scrollTo(0, y);
+    });
+  }
+
+  function saveEdit(k) {
+    var parts = k.split('\u0001'), target = S.edit.qty;
+    S.busy = true; S.error = ''; render();
+    api('reduceOrder', { productId: parts[0], option: parts[1] || '', qty: target }).then(function (res) {
+      S.busy = false;
+      if (res.ok) S.edit = null; else S.error = res.message || 'แก้จำนวนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
+    }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; }).then(function () {
+      var y = window.scrollY; render(); window.scrollTo(0, y);
+    });
+  }
+
+  function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
+
   function gateAfterBootstrap(registered) {
     if (!S.friend) return setScreen('friend');
     setScreen(registered ? 'order' : 'register');
@@ -365,6 +411,14 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
+    else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }
+    else if (act === 'edit-inc') { S.edit.qty += 1; keepScroll(); }
+    else if (act === 'edit-cancel') { S.edit = null; keepScroll(); }
+    else if (act === 'edit-save') saveEdit(t.getAttribute('data-k'));
+    else if (act === 'cancel-ask') { S.edit = null; S.confirmCancel = t.getAttribute('data-k'); var y1 = window.scrollY; render(); window.scrollTo(0, y1); }
+    else if (act === 'cancel-no') { S.confirmCancel = ''; var y2 = window.scrollY; render(); window.scrollTo(0, y2); }
+    else if (act === 'cancel-yes') cancelLine(t.getAttribute('data-k'));
     else if (act === 'my') showMy();
     else if (act === 'reload') location.reload();
     else if (act === 'recheck') recheckFriend().then(function () { gateAfterBootstrap(!!S.memberCode); });

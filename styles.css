@@ -138,3 +138,16 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 .callout p { margin: 0; font-size: 15px; line-height: 1.5; }
 .bar .btn { white-space: nowrap; }
 .bar .label { font-size: 13px; }
+
+.my-order.cancelled { opacity: .5; text-decoration: line-through; }
+.danger-link { color: #B3261E; font-size: 14px; padding: 2px 0 10px; }
+.cancel-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0 12px; font-size: 14px; }
+.cancel-confirm span { flex: 1 1 100%; font-weight: 600; }
+.btn.danger { background: #B3261E; border-color: #B3261E; color: #fff; }
+.cancel-confirm .btn { padding: 8px 14px; min-height: 40px; }
+
+.edit-qty { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 6px 0 12px; }
+.edit-qty > span:first-child { font-weight: 600; flex: 1; }
+.edit-btns { display: flex; gap: 8px; flex: 1 1 100%; }
+.edit-btns .btn { padding: 8px 16px; min-height: 40px; }
+.edit-qty .small { flex: 1 1 100%; margin: 0; }

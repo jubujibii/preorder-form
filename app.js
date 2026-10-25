@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -90,7 +90,7 @@
   }
 
   // ---------- หน้าจอ ----------
-  function setScreen(name) { S.screen = name; S.error = ''; render(); window.scrollTo(0, 0); }
+  function setScreen(name) { S.screen = name; S.error = ''; S.notice = ''; render(); window.scrollTo(0, 0); }
 
   function render() {
     memberEl.hidden = !S.memberCode;
@@ -141,7 +141,8 @@
     order: function () {
       if (S.products.length === 0) {
         return '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
-          '<button class="btn block" data-act="my">ดูออเดอร์ของฉัน</button>';
+          '<button class="btn block" data-act="refresh">รีเฟรชรายการ</button>' +
+          '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>';
       }
       var groups = [];
       S.products.forEach(function (p) {
@@ -149,7 +150,8 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = '<h1>สั่งพรีออเดอร์</h1>' +
+      var html = '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
+        (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="muted">เลือกจำนวนที่ต้องการ ยอดด้านล่างเป็นค่าสินค้า ค่าส่งจีนและค่านำเข้าร้านจะแจ้งตามหลัง</p>' + errBanner();
       groups.forEach(function (g) {
         html += '<h2>พรี ' + esc(g.code) + '</h2><p class="small muted">ปิดรับ ' + esc(closeText(g.closeAt)) + '</p><ul class="items">';
@@ -309,6 +311,22 @@
     return L.getFriendship().then(function (f) { S.friend = !!f.friendFlag; S.friendUnknown = false; }, function () { S.friend = true; S.friendUnknown = true; });
   }
 
+  function refreshProducts() {
+    if (S.refreshing) return;
+    var before = productsById(), had = cartLines().length;
+    S.refreshing = true; S.notice = ''; S.error = ''; render();
+    loadBootstrap().then(function () {
+      var added = 0;
+      productsById().forEach(function (p, id) { if (!before.has(id)) added++; });
+      var lost = had - cartLines().length;
+      S.notice = (added ? 'มีสินค้าใหม่ ' + added + ' รายการ' : 'ไม่มีสินค้าใหม่') +
+        (lost > 0 ? ' · สินค้า ' + lost + ' รายการในตะกร้าปิดรับแล้วจึงถูกเอาออก' : '');
+    }).catch(function () { S.error = 'รีเฟรชไม่สำเร็จ ลองใหม่อีกครั้ง'; }).then(function () {
+      S.refreshing = false;
+      var y = window.scrollY; render(); window.scrollTo(0, y); refreshTotal();
+    });
+  }
+
   app.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');
     if (!t) return;
@@ -317,6 +335,7 @@
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
+    else if (act === 'refresh') refreshProducts();
     else if (act === 'my') showMy();
     else if (act === 'reload') location.reload();
     else if (act === 'recheck') recheckFriend().then(function () { gateAfterBootstrap(!!S.memberCode); });

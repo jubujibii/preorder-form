@@ -11,7 +11,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, payDetail: {}, slipBusy: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -272,6 +272,7 @@
               '<div class="pay-amt">' + baht(r.totalSatang) + '</div>';
             if (!r.paid) {
               var busy = S.slipBusy === sk;
+              if (S.slipErr[sk] && !busy) html += '<div class="slip-fail" role="alert"><strong>⚠ แนบสลิปไม่สำเร็จ</strong><span>' + esc(S.slipErr[sk]) + '</span><span class="small">สลิปยังไม่ถูกส่งถึงร้าน กดแนบสลิปอีกครั้ง หรือติดต่อแอดมิน</span></div>';
               var inp = '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '>';
               if (r.slipAt) {
                 html += '<div class="slip-done">✓ ส่งสลิปแล้ว · รอร้านตรวจสอบ<small>' + esc(closeText(r.slipAt)) + '</small></div>' +
@@ -460,7 +461,7 @@
 
   function sendSlip(sk, file) {
     var parts = sk.split('|');
-    S.slipBusy = sk; S.error = ''; keepScroll();
+    S.slipBusy = sk; S.error = ''; delete S.slipErr[sk]; keepScroll();
     slipToJpegBase64(file).then(function (b64) {
       return api('uploadSlip', { preorderCode: parts[0], round: Number(parts[1]), image: b64 });
     }).then(function (res) {
@@ -469,7 +470,7 @@
       return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
     }).catch(function (e) {
       var code = e && (e.code || (e instanceof TypeError ? 'network' : ''));
-      S.error = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'ส่งสลิปไม่สำเร็จ ลองใหม่อีกครั้ง' + (code ? ' (รหัส: ' + code + ')' : '');
+      S.slipErr[sk] = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'เกิดข้อผิดพลาดจากระบบ' + (code ? ' (รหัส: ' + code + ')' : '');
       if (window.console) console.error('uploadSlip failed', e);
     }).then(function () { S.slipBusy = ''; keepScroll(); });
   }

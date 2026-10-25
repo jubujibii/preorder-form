@@ -247,3 +247,7 @@ a.admin-btn { text-decoration: none; }
 .slip-done small { font-weight: 400; color: #3f7a58; }
 .slip-redo { display: block; text-align: center; margin-top: 8px; font-size: 14px; color: var(--teal-dark); text-decoration: underline; cursor: pointer; padding: 6px; }
 .slip-redo.is-busy { opacity: .7; pointer-events: none; text-decoration: none; }
+
+.slip-fail { background: #FDECEA; border: 1.5px solid #E0573A; color: #9B1C0F; border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px; display: flex; flex-direction: column; gap: 3px; }
+.slip-fail strong { font-size: 16px; }
+.slip-fail .small { color: #7a2a20; }

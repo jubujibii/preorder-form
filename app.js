@@ -1,0 +1,349 @@
+(function () {
+  'use strict';
+  var CFG = window.APP_CONFIG || {};
+  var params = new URLSearchParams(location.search);
+  var MOCK = params.get('mock') === '1';
+  var OA_URL = 'https://line.me/R/ti/p/@841hdioo';
+  var MAX_QTY = 99;
+  var app = document.getElementById('app');
+  var memberEl = document.getElementById('member');
+
+  var S = {
+    screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
+    busy: false, error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    requestId: null, requestKey: '', receipt: null, my: null,
+  };
+
+  // ---------- ตัวช่วย ----------
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function baht(satang) {
+    var s = formatSatang(satang);
+    return '฿' + (s.slice(-3) === '.00' ? s.slice(0, -3) : s);
+  }
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    var a = new Uint8Array(16);
+    crypto.getRandomValues(a);
+    return Array.prototype.map.call(a, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function closeText(iso) {
+    return new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
+  }
+  function qtyKey(productId, option) { return productId + '\u0001' + option; }
+  function productsById() {
+    var m = new Map();
+    S.products.forEach(function (p) { m.set(p.productId, p); });
+    return m;
+  }
+  function cartLines() {
+    var out = [];
+    S.products.forEach(function (p) {
+      var opts = p.options.length ? p.options : [''];
+      opts.forEach(function (o) {
+        var q = S.qty[qtyKey(p.productId, o)] || 0;
+        if (q > 0) out.push({ productId: p.productId, option: o, qty: q });
+      });
+    });
+    return out;
+  }
+
+  // ---------- LIFF / API (มีโหมดจำลอง ?mock=1) ----------
+  var L = window.liff;
+  var mockDb = { registered: params.get('registered') === '1', orders: [], member: 'P2P-N00000' };
+  if (MOCK) {
+    L = {
+      init: function () { return Promise.resolve(); }, isLoggedIn: function () { return true; }, login: function () {},
+      getAccessToken: function () { return 'mock-token'; },
+      getProfile: function () { return Promise.resolve({ displayName: 'ลูกค้าทดสอบ' }); },
+      getFriendship: function () { return params.get('friend') === '0' ? Promise.resolve({ friendFlag: false }) : params.get('friend') === 'err' ? Promise.reject(new Error('x')) : Promise.resolve({ friendFlag: true }); },
+    };
+  }
+  function mockApi(p) {
+    var closeAt = new Date(Date.now() + 5 * 86400000).toISOString();
+    var products = params.get('empty') === '1' ? [] : [
+      { productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt },
+      { productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt },
+    ];
+    var res;
+    if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products };
+    else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
+    else if (p.action === 'placeOrder') {
+      if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
+      else { mockDb.orders = mockDb.orders.concat(p.lines); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
+    } else if (p.action === 'myOrders') {
+      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: 'รับออเดอร์' }; }),
+        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false }, round2: null }] };
+    } else res = { ok: false, error: 'bad_request', message: 'x' };
+    return new Promise(function (r) { setTimeout(function () { r(res); }, 150); });
+  }
+  function api(action, body) {
+    var payload = Object.assign({ action: action, accessToken: L.getAccessToken() }, body || {});
+    var req = MOCK ? mockApi(payload) : fetch(CFG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); });
+    return req.then(function (res) {
+      if (res && res.error === 'invalid_token' && !MOCK) { L.login(); return new Promise(function () {}); }
+      return res;
+    });
+  }
+
+  // ---------- หน้าจอ ----------
+  function setScreen(name) { S.screen = name; S.error = ''; render(); window.scrollTo(0, 0); }
+
+  function render() {
+    memberEl.hidden = !S.memberCode;
+    memberEl.textContent = S.memberCode;
+    var fn = SCREENS[S.screen] || SCREENS.error;
+    app.innerHTML = fn();
+  }
+
+  function errBanner() {
+    return S.error ? '<div class="notice bad" role="alert">' + esc(S.error) + '</div>' : '';
+  }
+
+  var SCREENS = {
+    loading: function () { return '<p class="center muted">กำลังโหลด…</p>'; },
+
+    error: function () {
+      return '<h1>เปิดหน้านี้ไม่ได้</h1>' + errBanner() +
+        '<p class="muted">ปิดหน้าต่างนี้แล้วเปิดลิงก์จาก LINE อีกครั้ง</p>' +
+        '<button class="btn primary block" data-act="reload">ลองอีกครั้ง</button>';
+    },
+
+    friend: function () {
+      return '<h1>เพิ่มเพื่อนร้านก่อนสั่ง</h1>' +
+        '<p>ร้านต้องแจ้งยอดและเลขออเดอร์ทางแชท LINE ของร้าน ลูกค้าที่ยังไม่ได้เพิ่มเพื่อนจะไม่ได้รับข้อความ</p>' +
+        '<a class="btn primary block" href="' + OA_URL + '">เพิ่มเพื่อน PRE2PET</a>' +
+        '<button class="btn block" data-act="recheck">เพิ่มเพื่อนแล้ว ตรวจอีกครั้ง</button>';
+    },
+
+    register: function () {
+      var f = S.form, e = S.fieldErrors;
+      function field(id, label, input, opt) {
+        return '<label for="' + id + '">' + label + (opt ? ' <span class="opt">ไม่บังคับ</span>' : '') + '</label>' + input +
+          (e[id] ? '<p class="err" id="' + id + '-err">' + esc(e[id]) + '</p>' : '');
+      }
+      function attrs(id) { return ' id="' + id + '" name="' + id + '"' + (e[id] ? ' class="invalid" aria-invalid="true" aria-describedby="' + id + '-err"' : ''); }
+      return '<h1>ลงทะเบียนผู้รับ</h1>' +
+        '<p class="muted">กรอกครั้งเดียว ครั้งต่อไปสั่งได้เลย ร้านใช้ข้อมูลนี้จัดส่งของให้คุณ</p>' + errBanner() +
+        (S.friendUnknown ? '<div class="notice">เช็กสถานะเพื่อนไม่ได้ ถ้ายังไม่ได้เพิ่มเพื่อน <a href="' + OA_URL + '">เพิ่มเพื่อน PRE2PET</a> เพื่อรับแจ้งยอด</div>' : '') +
+        '<form id="regform" novalidate>' +
+        field('recipientName', 'ชื่อผู้รับ', '<input' + attrs('recipientName') + ' autocomplete="name" value="' + esc(f.recipientName) + '">') +
+        field('phone', 'เบอร์โทร', '<input' + attrs('phone') + ' type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone) + '">') +
+        field('address', 'ที่อยู่จัดส่ง', '<textarea' + attrs('address') + ' autocomplete="street-address">' + esc(f.address) + '</textarea>') +
+        field('oldCode', 'รหัสสมาชิกเดิม', '<input' + attrs('oldCode') + ' value="' + esc(f.oldCode) + '">', true) +
+        '<button class="btn primary block" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'บันทึกและเริ่มสั่ง') + '</button>' +
+        '</form>';
+    },
+
+    order: function () {
+      if (S.products.length === 0) {
+        return '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
+          '<button class="btn block" data-act="my">ดูออเดอร์ของฉัน</button>';
+      }
+      var groups = [];
+      S.products.forEach(function (p) {
+        var g = groups.filter(function (x) { return x.code === p.preorderCode; })[0];
+        if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
+        g.items.push(p);
+      });
+      var html = '<h1>สั่งพรีออเดอร์</h1>' +
+        '<p class="muted">เลือกจำนวนที่ต้องการ ยอดด้านล่างเป็นค่าสินค้า ค่าส่งจีนและค่านำเข้าร้านจะแจ้งตามหลัง</p>' + errBanner();
+      groups.forEach(function (g) {
+        html += '<h2>พรี ' + esc(g.code) + '</h2><p class="small muted">ปิดรับ ' + esc(closeText(g.closeAt)) + '</p><ul class="items">';
+        g.items.forEach(function (p) {
+          var opts = p.options.length ? p.options : [''];
+          html += '<li class="item"><div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div><div class="variants">';
+          opts.forEach(function (o) {
+            var k = qtyKey(p.productId, o), q = S.qty[k] || 0;
+            html += '<div class="variant' + (q ? ' has' : '') + '" data-k="' + esc(k) + '"><span>' + (o ? esc(o) : 'จำนวน') + '</span>' +
+              '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
+              '<output aria-live="off">' + q + '</output>' +
+              '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
+          });
+          html += '</div></li>';
+        });
+        html += '</ul>';
+      });
+      html += '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>' +
+        '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้า (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
+        '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
+      return html;
+    },
+
+    done: function () {
+      var r = S.receipt;
+      var rows = r.lines.map(function (l) {
+        return '<div class="row"><span>' + esc(l.name) + (l.option ? ' (' + esc(l.option) + ')' : '') + ' × ' + l.qty + '</span><span>' + baht(l.lineSatang) + '</span></div>';
+      }).join('');
+      return '<h1>' + (r.replay ? 'ออเดอร์นี้ถูกบันทึกไว้แล้ว' : 'บันทึกออเดอร์แล้ว') + '</h1>' +
+        '<p class="muted">ร้านจะแจ้งยอดรวมค่าส่งทางแชท LINE ของร้านเมื่อถึงรอบ</p>' +
+        '<article class="ticket" aria-label="สรุปออเดอร์"><div class="small muted">รหัสสมาชิกของคุณ</div><div class="ticket-code">' + esc(S.memberCode) + '</div>' +
+        '<dl>' + rows + '<div class="row total"><span>ค่าสินค้า</span><span>' + baht(r.totalSatang) + '</span></div></dl></article>' +
+        '<button class="btn primary block" data-act="more">สั่งเพิ่ม</button>' +
+        '<button class="btn block" data-act="my">ดูออเดอร์ของฉัน</button>';
+    },
+
+    my: function () {
+      var d = S.my;
+      var html = '<h1>ออเดอร์ของฉัน</h1>' + errBanner();
+      if (!d) return html + '<p class="center muted">กำลังโหลด…</p>';
+      if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
+      var codes = [];
+      d.orders.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });
+      codes.forEach(function (code) {
+        html += '<h2>พรี ' + esc(code) + '</h2>';
+        var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
+        if (b) {
+          html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
+          [['รอบ 1', b.round1], ['รอบ 2', b.round2]].forEach(function (x) {
+            if (x[1]) html += '<div class="my-order"><span>' + x[0] + ' ยอดที่ต้องโอน ' + baht(x[1].totalSatang) + '</span><span class="badge' + (x[1].paid ? ' ok' : '') + '">' + (x[1].paid ? 'จ่ายแล้ว' : 'รอชำระ') + '</span></div>';
+          });
+          html += '</div>';
+        }
+        d.orders.filter(function (o) { return o.preorderCode === code; }).forEach(function (o) {
+          html += '<div class="my-order"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
+        });
+      });
+      return html + '<button class="btn block" data-act="more">กลับไปสั่งของ</button>';
+    },
+  };
+
+  // ---------- เหตุการณ์ ----------
+  function refreshTotal() {
+    var el = document.getElementById('total');
+    if (!el) return;
+    var sum = cartSummary(cartLines(), productsById());
+    el.textContent = baht(sum.totalSatang);
+    var btn = document.getElementById('submit');
+    if (btn) btn.disabled = S.busy || sum.lines.length === 0 || !S.friend;
+  }
+
+  function bump(k, delta) {
+    var q = Math.max(0, Math.min(MAX_QTY, (S.qty[k] || 0) + delta));
+    S.qty[k] = q;
+    var row = app.querySelector('.variant[data-k="' + k.replace(/"/g, '\\"') + '"]');
+    if (row) {
+      row.classList.toggle('has', q > 0);
+      row.querySelector('output').textContent = q;
+      row.querySelector('[data-act=dec]').disabled = q <= 0;
+      row.querySelector('[data-act=inc]').disabled = q >= MAX_QTY;
+    }
+    refreshTotal();
+  }
+
+  function loadBootstrap() {
+    return api('bootstrap').then(function (res) {
+      if (!res.ok) throw new Error(res.message || res.error);
+      S.products = res.products;
+      S.memberCode = res.memberCode || '';
+      return res;
+    });
+  }
+
+  function submitOrder() {
+    var lines = cartLines();
+    if (!lines.length || S.busy) return;
+    var key = JSON.stringify(lines);
+    if (key !== S.requestKey) { S.requestKey = key; S.requestId = uuid(); } // รายการเดิม = ใช้ requestId เดิมซ้ำ
+    S.busy = true; S.error = '';
+    var btn = document.getElementById('submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง…'; }
+    api('placeOrder', { requestId: S.requestId, lines: lines }).then(function (res) {
+      S.busy = false;
+      if (res.ok) {
+        var byId = productsById();
+        var sum = cartSummary(lines, byId);
+        S.receipt = { replay: !!res.replay, totalSatang: res.goodsTotalSatang, lines: sum.lines.map(function (l) { return { name: byId.get(l.productId).name, option: l.option, qty: l.qty, lineSatang: l.lineSatang }; }) };
+        S.qty = {}; S.requestKey = ''; S.requestId = null;
+        return setScreen('done');
+      }
+      if (res.error === 'closed') { S.error = 'พรีนี้ปิดรับแล้ว ออเดอร์ของคุณยังไม่ถูกบันทึก'; return loadBootstrap().then(function () { render(); }); }
+      if (res.error === 'not_registered') return setScreen('register');
+      S.error = res.error === 'bad_request' ? (res.message || 'ข้อมูลไม่ถูกต้อง ตรวจรายการแล้วลองใหม่') : 'ส่งออเดอร์ไม่สำเร็จ กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ';
+      render(); refreshTotal();
+    }).catch(function () {
+      S.busy = false;
+      S.error = 'เชื่อมต่อไม่ได้ กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ';
+      render(); refreshTotal();
+    });
+  }
+
+  function submitRegister(form) {
+    var v = { recipientName: form.recipientName.value.trim(), phone: form.phone.value.trim(), address: form.address.value.trim(), oldCode: form.oldCode.value.trim() };
+    S.form = v;
+    var e = {};
+    if (!v.recipientName) e.recipientName = 'กรอกชื่อผู้รับ';
+    if (!normalizePhone(v.phone)) e.phone = 'เบอร์โทรไม่ถูกต้อง ใช้ 9-10 หลัก ขึ้นต้นด้วย 0';
+    if (v.address.length < 10) e.address = 'กรอกที่อยู่ให้ครบ (บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์)';
+    if (v.oldCode.length > 30) e.oldCode = 'รหัสเดิมยาวเกินไป';
+    S.fieldErrors = e;
+    if (Object.keys(e).length) { render(); var first = app.querySelector('.invalid'); if (first) first.focus(); return; }
+    S.busy = true; S.error = ''; render();
+    api('register', Object.assign({ lineName: S.lineName }, v)).then(function (res) {
+      S.busy = false;
+      if (res.ok) { S.memberCode = res.memberCode; return setScreen('order'); }
+      if (res.errors) S.fieldErrors = res.errors;
+      S.error = res.errors ? 'ตรวจข้อมูลที่ทำเครื่องหมายไว้' : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      render();
+    }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; render(); });
+  }
+
+  function showMy() {
+    S.my = null; setScreen('my');
+    api('myOrders').then(function (res) {
+      if (!res.ok) throw new Error();
+      S.my = res; render();
+    }).catch(function () { S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง'; S.my = { orders: [], billing: [] }; render(); });
+  }
+
+  function gateAfterBootstrap(registered) {
+    if (!S.friend) return setScreen('friend');
+    setScreen(registered ? 'order' : 'register');
+    if (registered) refreshTotal();
+  }
+
+  function recheckFriend() {
+    return L.getFriendship().then(function (f) { S.friend = !!f.friendFlag; S.friendUnknown = false; }, function () { S.friend = true; S.friendUnknown = true; });
+  }
+
+  app.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]');
+    if (!t) return;
+    var act = t.getAttribute('data-act');
+    if (act === 'inc') bump(t.getAttribute('data-k'), 1);
+    else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
+    else if (act === 'submit') submitOrder();
+    else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
+    else if (act === 'my') showMy();
+    else if (act === 'reload') location.reload();
+    else if (act === 'recheck') recheckFriend().then(function () { gateAfterBootstrap(!!S.memberCode); });
+  });
+  app.addEventListener('submit', function (ev) {
+    if (ev.target.id === 'regform') { ev.preventDefault(); submitRegister(ev.target); }
+  });
+
+  // ---------- เริ่มทำงาน ----------
+  function start() {
+    var registered = false;
+    return Promise.resolve(L.getProfile()).catch(function () { return {}; }).then(function (p) {
+      S.lineName = (p && p.displayName) || '';
+      return recheckFriend();
+    }).then(function () {
+      return loadBootstrap();
+    }).then(function (res) {
+      registered = res.registered;
+      gateAfterBootstrap(registered);
+    });
+  }
+
+  Promise.resolve(L.init({ liffId: CFG.LIFF_ID })).then(function () {
+    if (!L.isLoggedIn()) { L.login(); return null; }
+    return start();
+  }).catch(function (e) {
+    S.error = 'ไม่สามารถเริ่มระบบได้ (' + (e && e.message ? e.message : 'ไม่ทราบสาเหตุ') + ')';
+    setScreen('error');
+  });
+})();

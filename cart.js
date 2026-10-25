@@ -55,8 +55,10 @@ function filterMyOrders(lines, billing, tab) {
   if (tab === 'all') return lines.slice();
   var unpaid = unpaidPreorders(billing);
   return lines.filter(function (l) {
-    if (tab === 'pay') return !!unpaid[l.preorderCode] && l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
-    return orderTabOf(l.status) === tab;
+    // รายการอยู่แท็บเดียว: ถ้าพรีนั้นมียอดค้างชำระ (และรายการยังไม่ยกเลิก/คืนเงิน) จะอยู่แท็บ "ที่ต้องชำระ" เท่านั้น
+    var inPay = !!unpaid[l.preorderCode] && l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
+    if (tab === 'pay') return inPay;
+    return !inPay && orderTabOf(l.status) === tab;
   });
 }
 

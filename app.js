@@ -65,8 +65,8 @@
   function mockApi(p) {
     var closeAt = new Date(Date.now() + 5 * 86400000).toISOString();
     var products = params.get('empty') === '1' ? [] : [
-      { productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt },
-      { productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt },
+      { productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
+      { productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
     ];
     var res;
     if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products };
@@ -157,7 +157,7 @@
         html += '<h2>พรี ' + esc(g.code) + '</h2><p class="small muted">ปิดรับ ' + esc(closeText(g.closeAt)) + '</p><ul class="items">';
         g.items.forEach(function (p) {
           var opts = p.options.length ? p.options : [''];
-          html += '<li class="item"><div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div><div class="variants">';
+          html += '<li class="item">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div><div class="variants">';
           opts.forEach(function (o) {
             var k = qtyKey(p.productId, o), q = S.qty[k] || 0;
             html += '<div class="variant' + (q ? ' has' : '') + '" data-k="' + esc(k) + '"><span>' + (o ? esc(o) : 'จำนวน') + '</span>' +
@@ -326,6 +326,9 @@
       var y = window.scrollY; render(); window.scrollTo(0, y); refreshTotal();
     });
   }
+
+  // รูปโหลดไม่ขึ้น (ลิงก์เสีย/ไม่ได้แชร์สาธารณะ) ให้ซ่อน ไม่ให้เห็นไอคอนรูปแตก
+  app.addEventListener('error', function (ev) { if (ev.target && ev.target.classList && ev.target.classList.contains('pimg')) ev.target.style.display = 'none'; }, true);
 
   app.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');

@@ -24,3 +24,11 @@ function formatThaiDate(date) {
   return d.getUTCDate() + ' ' + THAI_MONTHS_SHORT[d.getUTCMonth()] + ' ' + (d.getUTCFullYear() + 543);
 }
 
+// ลิงก์รูปสินค้า: รับเฉพาะ https; ลิงก์แชร์ของ Google Drive แปลงเป็นลิงก์รูปย่อที่ฝังในหน้าเว็บได้
+function normalizeImageUrl(raw) {
+  var s = String(raw == null ? '' : raw).trim();
+  if (!/^https:\/\/[^\s"'<>\\]+$/i.test(s) || s.length > 500) return '';
+  var m = s.match(/^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?(?:[^#]*&)?id=|uc\?(?:[^#]*&)?id=)([A-Za-z0-9_-]+)/i);
+  return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w800' : s;
+}
+

@@ -68,3 +68,10 @@ function tabCounts(lines, billing) {
   return out;
 }
 
+// ลิงก์เปิดแชท LINE OA ของร้านพร้อมข้อความที่พิมพ์ให้ล่วงหน้า (รูปแบบทางการของ LINE: /R/oaMessage/<OA id>/?<ข้อความ>)
+function adminChatUrl(oaBasicId, memberCode, orderNos) {
+  var nos = (orderNos || []).filter(Boolean);
+  var text = 'สอบถามออเดอร์' + (nos.length ? ' ' + nos.join(', ') : '') + (memberCode ? ' (' + memberCode + ')' : '');
+  return 'https://line.me/R/oaMessage/' + encodeURIComponent(oaBasicId) + '/?' + encodeURIComponent(text);
+}
+

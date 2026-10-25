@@ -119,7 +119,11 @@
   }
 
   function adminBtn() {
-    return '<button type="button" class="btn block admin-btn" data-act="admin">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></button>';
+    // ใช้ลิงก์ <a> ธรรมดา (LINE รับลิงก์ line.me/R/... จากการกดของผู้ใช้โดยตรง เหมือนปุ่มเพิ่มเพื่อน)
+    var billing = S.my && S.my.billing ? S.my.billing : [];
+    var unpaid = billing.filter(function (b) { return (b.round1 && !b.round1.paid) || (b.round2 && !b.round2.paid); });
+    var nos = (unpaid.length ? unpaid : billing).map(function (b) { return b.orderNo; }).slice(0, 3);
+    return '<a class="btn block admin-btn" href="' + esc(adminChatUrl(OA_ID, S.memberCode, nos)) + '">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></a>';
   }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
@@ -271,7 +275,7 @@
             html += '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันยกเลิก') + '</button><button type="button" class="btn" data-act="cancel-no"' + (S.busy ? ' disabled' : '') + '>ไม่ยกเลิก</button></div>';
           } else if (o.canCancel) {
             html += '<div class="line-actions">' + (o.qty > 1 ? '<button type="button" class="linkbtn" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '">แก้ไข</button>' : '') +
-              '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิกรายการ</button></div>';
+              '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิก</button></div>';
           }
           html += '</div>';
         });
@@ -453,12 +457,6 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
-    else if (act === 'admin') {
-      var unpaidNos = S.my ? S.my.billing.filter(function (b) { return (b.round1 && !b.round1.paid) || (b.round2 && !b.round2.paid); }).map(function (b) { return b.orderNo; }) : [];
-      var nos = unpaidNos.length ? unpaidNos : (S.my ? S.my.billing.map(function (b) { return b.orderNo; }) : []);
-      var url = adminChatUrl(OA_ID, S.memberCode, nos.slice(0, 3));
-      if (L && L.openWindow) L.openWindow({ url: url, external: false }); else window.open(url, '_blank');
-    }
     else if (act === 'more-tabs') { S.myMore = !(S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0); keepScroll(); }
     else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }

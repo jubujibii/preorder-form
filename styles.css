@@ -217,3 +217,10 @@ a.admin-btn { text-decoration: none; }
 .tile.active .tile-label { font-weight: 700; }
 .tab-title { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 18px 0 8px; }
 .tab-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal-dark); }
+
+.order-no { padding: 0 0 4px; }
+.line-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.line-price { font-size: 14px; color: var(--muted, #5b6b7b); }
+.line-price strong { color: var(--ink); }
+.my-order .badge { white-space: nowrap; flex: none; }
+.my-order .badge { align-self: flex-start; height: auto; line-height: 1.5; padding: 2px 10px; }

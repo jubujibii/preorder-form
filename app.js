@@ -79,7 +79,7 @@
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์' }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
-      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
+      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
     } else if (p.action === 'uploadSlip') {
       if (params.get('slipfail') === '1') res = { ok: false, error: 'server_error', message: 'x' };
@@ -262,13 +262,13 @@
         html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? S.myTab === 'pay' : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
-          html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
+          html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span> <strong>' + esc(b.orderNo) + '</strong></div>';
           [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
             if (!r) return;
             var sk = code + '|' + x[2];
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
-            html += '<div class="my-order"><span>' + x[0] + ' ยอดที่ต้องโอน ' + baht(r.totalSatang) + '</span>' + badge + '</div>';
+            html += '<div class="my-order"><span>' + (x[2] === 1 ? 'ยอดโอนรอบ 1 (ค่าสินค้า+ส่งจีน) ' : 'ยอดโอนรอบ 2 ') + '<strong>' + baht(r.totalSatang) + '</strong></span>' + badge + '</div>';
             if (!r.paid) {
               var busy = S.slipBusy === sk;
               html += '<div class="slip-row">' + (r.slipAt ? '<span class="small muted">ส่งสลิปแล้ว ' + esc(closeText(r.slipAt)) + ' · รอร้านตรวจสอบ</span>' : '<span class="small muted">โอนแล้วแนบสลิปได้ที่นี่</span>') +
@@ -281,7 +281,7 @@
         mine.forEach(function (o) {
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
-          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
+          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span class="line-name">' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + (o.priceThb != null ? '<span class="line-price">' + baht(o.priceThb * 100) + ' × ' + o.qty + ' = <strong>' + baht(o.priceThb * o.qty * 100) + '</strong></span>' : '') + '</span>' + (S.myTab === 'pay' ? '' : '<span class="badge">' + esc(o.status) + '</span>') + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +

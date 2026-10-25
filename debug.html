@@ -29,6 +29,7 @@ function call(body) {
     log('displayName', p.displayName);
     var tk = liff.getIDToken();
     log('hasIdToken', !!tk);
+    log('hasAccessToken', !!liff.getAccessToken());
     try { log('permission openid', await liff.permission.query('openid')); } catch (e) { log('permission openid error', String(e)); }
     try { log('permission profile', await liff.permission.query('profile')); } catch (e) { log('permission profile error', String(e)); }
     log('decoded', liff.getDecodedIDToken());
@@ -36,11 +37,11 @@ function call(body) {
     log('isInClient', liff.isInClient());
     try { var f = await liff.getFriendship(); log('friendFlag', f.friendFlag); } catch (e) { log('friendship error', String(e)); }
     if (!APP_CONFIG.API_URL) { log('API_URL', 'ยังว่าง — ใส่ URL ของ Apps Script ใน config.js'); return; }
-    try { log('whoami', await call({ action: 'whoami', idToken: liff.getIDToken() })); }
+    try { log('whoami', await call({ action: 'whoami', accessToken: liff.getAccessToken() })); }
     catch (e) { log('whoami ERROR (อาจเป็น CORS)', String(e)); }
     var b = document.getElementById('push'); b.hidden = false;
     b.onclick = async function () {
-      try { log('pushSelf', await call({ action: 'pushSelf', idToken: liff.getIDToken() })); }
+      try { log('pushSelf', await call({ action: 'pushSelf', accessToken: liff.getAccessToken() })); }
       catch (e) { log('pushSelf ERROR', String(e)); }
     };
   } catch (e) { log('ERROR', String(e)); }

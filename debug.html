@@ -25,7 +25,12 @@ function call(body) {
     await liff.init({ liffId: APP_CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var p = await liff.getProfile();
+    log('profile', p);
     log('displayName', p.displayName);
+    var tk = liff.getIDToken();
+    log('hasIdToken', !!tk);
+    log('decoded', liff.getDecodedIDToken());
+    log('os', liff.getOS() + ' / LIFF ' + liff.getVersion() + ' / LINE ' + liff.getLineVersion());
     log('isInClient', liff.isInClient());
     try { var f = await liff.getFriendship(); log('friendFlag', f.friendFlag); } catch (e) { log('friendship error', String(e)); }
     if (!APP_CONFIG.API_URL) { log('API_URL', 'ยังว่าง — ใส่ URL ของ Apps Script ใน config.js'); return; }

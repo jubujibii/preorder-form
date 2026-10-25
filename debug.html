@@ -29,6 +29,8 @@ function call(body) {
     log('displayName', p.displayName);
     var tk = liff.getIDToken();
     log('hasIdToken', !!tk);
+    try { log('permission openid', await liff.permission.query('openid')); } catch (e) { log('permission openid error', String(e)); }
+    try { log('permission profile', await liff.permission.query('profile')); } catch (e) { log('permission profile error', String(e)); }
     log('decoded', liff.getDecodedIDToken());
     log('os', liff.getOS() + ' / LIFF ' + liff.getVersion() + ' / LINE ' + liff.getLineVersion());
     log('isInClient', liff.isInClient());

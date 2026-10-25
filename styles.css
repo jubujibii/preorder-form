@@ -211,3 +211,9 @@ a.admin-btn { text-decoration: none; }
 .slip-btn.is-busy { opacity: .7; pointer-events: none; }
 
 .detail-btn { display: block; margin: 4px 0 2px auto; padding: 8px 0 8px 12px; font-size: 15px; color: var(--teal-dark); font-weight: 600; }
+
+.tile.active { border-width: 2px; border-color: var(--teal-dark); box-shadow: 0 0 0 3px rgba(15,118,110,.15); }
+.tile-pay.active { border-color: #D99A00; background: #FFE9A3; box-shadow: 0 0 0 3px rgba(217,154,0,.25); }
+.tile.active .tile-label { font-weight: 700; }
+.tab-title { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 18px 0 8px; }
+.tab-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal-dark); }

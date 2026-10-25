@@ -252,6 +252,7 @@
           return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (counts[k] && k !== 'all' ? '<span class="tab-n">' + counts[k] + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
+      html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
       if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>' + adminBtn();
       var codes = [];
       shown.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });

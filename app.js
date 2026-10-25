@@ -259,7 +259,7 @@
       codes.forEach(function (code) {
         var mine = shown.filter(function (o) { return o.preorderCode === code; });
         var pieces = mine.reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + (S.openMy[code] ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? S.myTab === 'pay' : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
@@ -276,10 +276,9 @@
                 '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label></div>';
             }
           });
-          if (S.myTab === 'pay') html += '<button type="button" class="linkbtn detail-btn" data-act="pay-detail" data-code="' + esc(code) + '" aria-expanded="' + !!S.payDetail[code] + '">' + (S.payDetail[code] ? 'ซ่อนรายละเอียด ▴' : 'ดูรายละเอียด ▾') + '</button>';
           html += '</div>';
         }
-        (S.myTab === 'pay' && !S.payDetail[code] ? [] : mine).forEach(function (o) {
+        mine.forEach(function (o) {
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';

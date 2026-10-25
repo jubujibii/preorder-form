@@ -464,11 +464,13 @@
     slipToJpegBase64(file).then(function (b64) {
       return api('uploadSlip', { preorderCode: parts[0], round: Number(parts[1]), image: b64 });
     }).then(function (res) {
-      if (!res.ok) throw new Error(res.message || 'upload_failed');
+      if (!res.ok) { var er = new Error(res.message || 'upload_failed'); er.code = res.error || 'unknown'; er.fromServer = true; throw er; }
       toast('ส่งสลิปแล้ว ✓ ร้านจะตรวจสอบ');
       return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
     }).catch(function (e) {
-      S.error = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'ส่งสลิปไม่สำเร็จ ลองใหม่อีกครั้ง';
+      var code = e && (e.code || (e instanceof TypeError ? 'network' : ''));
+      S.error = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'ส่งสลิปไม่สำเร็จ ลองใหม่อีกครั้ง' + (code ? ' (รหัส: ' + code + ')' : '');
+      if (window.console) console.error('uploadSlip failed', e);
     }).then(function () { S.slipBusy = ''; keepScroll(); });
   }
 

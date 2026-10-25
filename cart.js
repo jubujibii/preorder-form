@@ -13,3 +13,15 @@ function cartSummary(cart, productsById) {
   return { lines: lines, totalSatang: total };
 }
 
+// รวมรายการที่เป็นของชิ้นเดียวกัน (พรี+สินค้า+ตัวเลือก+สถานะ) จากหลายออเดอร์ให้เป็นบรรทัดเดียว เรียงตามที่เจอก่อน
+function mergeOrderLines(rows) {
+  var out = [];
+  var index = {};
+  rows.forEach(function (r) {
+    var k = JSON.stringify([r.preorderCode, r.productName, r.option, r.status]);
+    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productName: r.productName, option: r.option, status: r.status, qty: 0 }); }
+    out[index[k]].qty += r.qty;
+  });
+  return out;
+}
+

@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -155,7 +155,8 @@
       });
       var html = '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
-        '<p class="muted">เลือกจำนวนที่ต้องการ ยอดด้านล่างเป็นค่าสินค้า ค่าส่งจีนและค่านำเข้าร้านจะแจ้งตามหลัง</p>' + errBanner();
+        '<div class="callout" role="note"><strong>ยอดด้านล่างคือ "ค่าสินค้า" เท่านั้น</strong>' +
+        '<p>ยังไม่รวม <b>ค่าส่งจากจีน · ค่านำเข้า · ค่าบริการ · ค่าส่งในไทย</b> ร้านจะแจ้งยอดที่ต้องโอนให้ทางแชท LINE ในภายหลัง</p></div>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
       groups.sort(function (a, b) {
         var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();
@@ -166,7 +167,7 @@
           '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><ul class="items">';
         g.items.forEach(function (p) {
           var opts = p.options.length ? p.options : [''];
-          html += '<li class="item">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div><div class="variants">';
+          html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div><div class="variants">';
           opts.forEach(function (o) {
             var k = qtyKey(p.productId, o), q = S.qty[k] || 0;
             html += '<div class="variant' + (q ? ' has' : '') + '" data-k="' + esc(k) + '"><span>' + (o ? esc(o) : 'จำนวน') + '</span>' +
@@ -179,7 +180,7 @@
         html += '</ul></details>';
       });
       html += '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>' +
-        '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้า (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
+        '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
         '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
       return html;
     },
@@ -204,8 +205,11 @@
       if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var codes = [];
       d.orders.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });
+      var merged = mergeOrderLines(d.orders);
       codes.forEach(function (code) {
-        html += '<h2>พรี ' + esc(code) + '</h2>';
+        var mine = merged.filter(function (o) { return o.preorderCode === code; });
+        var pieces = mine.reduce(function (n, o) { return n + o.qty; }, 0);
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + (S.openMy[code] ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b) {
           html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
@@ -214,9 +218,10 @@
           });
           html += '</div>';
         }
-        d.orders.filter(function (o) { return o.preorderCode === code; }).forEach(function (o) {
+        mine.forEach(function (o) {
           html += '<div class="my-order"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
         });
+        html += '</details>';
       });
       return html + '<button class="btn block" data-act="more">กลับไปสั่งของ</button>';
     },
@@ -348,7 +353,7 @@
   // จำสถานะเปิด/ปิดของแต่ละรอบพรี ไว้ใช้ตอนรีเฟรช/วาดหน้าใหม่
   app.addEventListener('toggle', function (ev) {
     var d = ev.target;
-    if (d && d.classList && d.classList.contains('group')) S.open[d.getAttribute('data-code')] = d.open;
+    if (d && d.classList && d.classList.contains('group')) (d.getAttribute('data-scope') === 'my' ? S.openMy : S.open)[d.getAttribute('data-code')] = d.open;
   }, true);
 
   app.addEventListener('click', function (ev) {

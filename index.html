@@ -1,1 +1,19 @@
-<h1>เร็วๆ นี้</h1>
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRE2PET</title>
+</head>
+<body>
+<p id="msg">เร็วๆ นี้</p>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script>
+// liff.init() จะพาไปหน้าตามพารามิเตอร์ liff.state (เช่น /debug.html) ให้เอง
+liff.init({ liffId: APP_CONFIG.LIFF_ID }).catch(function (e) {
+  document.getElementById('msg').textContent = 'เร็วๆ นี้';
+});
+</script>
+</body>
+</html>

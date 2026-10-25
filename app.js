@@ -235,7 +235,7 @@
       html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + '</button></div>' +
         '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
         (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
-          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (counts[k] && k !== 'all' ? '<span class="tab-n">' + counts[k] + '</span>' : '') + '</button>';
+          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (counts[k] ? '<span class="tab-n">' + counts[k] + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
       if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>';

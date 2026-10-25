@@ -119,3 +119,14 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 .notice { background: #eef7f6; border-radius: 8px; padding: 8px 12px; font-size: 14px; margin: 8px 0; }
 
 .pimg { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: 12px; margin-bottom: 10px; background: #e6edf0; }
+
+.group { background: #fff; border: 1px solid var(--line); border-radius: 14px; margin: 12px 0; padding: 0 14px; }
+.group > summary { list-style: none; cursor: pointer; padding: 14px 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::after { content: '▾'; grid-column: 2; grid-row: 1; justify-self: end; transition: transform .15s; }
+.group[open] > summary::after { transform: rotate(180deg); }
+.g-title { font-weight: 700; font-size: 17px; }
+.g-meta { grid-column: 1; font-size: 13px; color: var(--muted, #667); }
+.g-cnt { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--teal-dark); }
+.g-cnt:empty { display: none; }
+.group .items { padding-bottom: 6px; }

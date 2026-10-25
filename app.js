@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -67,6 +67,9 @@
     var products = params.get('empty') === '1' ? [] : [
       { productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
       { productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
+      { productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
+      { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
+      { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     var res;
     if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products };
@@ -153,8 +156,14 @@
       var html = '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="muted">เลือกจำนวนที่ต้องการ ยอดด้านล่างเป็นค่าสินค้า ค่าส่งจีนและค่านำเข้าร้านจะแจ้งตามหลัง</p>' + errBanner();
+      // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
+      groups.sort(function (a, b) {
+        var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();
+        return d || String(a.code).localeCompare(String(b.code), 'th', { numeric: true });
+      });
       groups.forEach(function (g) {
-        html += '<h2>พรี ' + esc(g.code) + '</h2><p class="small muted">ปิดรับ ' + esc(closeText(g.closeAt)) + '</p><ul class="items">';
+        html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(g.code) + '</span>' +
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><ul class="items">';
         g.items.forEach(function (p) {
           var opts = p.options.length ? p.options : [''];
           html += '<li class="item">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div><div class="variants">';
@@ -167,7 +176,7 @@
           });
           html += '</div></li>';
         });
-        html += '</ul>';
+        html += '</ul></details>';
       });
       html += '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>' +
         '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้า (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
@@ -219,6 +228,12 @@
     if (!el) return;
     var sum = cartSummary(cartLines(), productsById());
     el.textContent = baht(sum.totalSatang);
+    var counts = {};
+    sum.lines.forEach(function (l) { var p = productsById().get(l.productId); if (p) counts[p.preorderCode] = (counts[p.preorderCode] || 0) + l.qty; });
+    Array.prototype.forEach.call(app.querySelectorAll('[data-cnt]'), function (el) {
+      var n = counts[el.getAttribute('data-cnt')] || 0;
+      el.textContent = n ? 'เลือกแล้ว ' + n + ' ชิ้น' : '';
+    });
     var btn = document.getElementById('submit');
     if (btn) btn.disabled = S.busy || sum.lines.length === 0 || !S.friend;
   }
@@ -329,6 +344,12 @@
 
   // รูปโหลดไม่ขึ้น (ลิงก์เสีย/ไม่ได้แชร์สาธารณะ) ให้ซ่อน ไม่ให้เห็นไอคอนรูปแตก
   app.addEventListener('error', function (ev) { if (ev.target && ev.target.classList && ev.target.classList.contains('pimg')) ev.target.style.display = 'none'; }, true);
+
+  // จำสถานะเปิด/ปิดของแต่ละรอบพรี ไว้ใช้ตอนรีเฟรช/วาดหน้าใหม่
+  app.addEventListener('toggle', function (ev) {
+    var d = ev.target;
+    if (d && d.classList && d.classList.contains('group')) S.open[d.getAttribute('data-code')] = d.open;
+  }, true);
 
   app.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');

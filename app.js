@@ -11,7 +11,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, slipBusy: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, payDetail: {}, slipBusy: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -275,9 +275,10 @@
                 '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label></div>';
             }
           });
+          if (S.myTab === 'pay') html += '<button type="button" class="linkbtn detail-btn" data-act="pay-detail" data-code="' + esc(code) + '" aria-expanded="' + !!S.payDetail[code] + '">' + (S.payDetail[code] ? 'ซ่อนรายละเอียด ▴' : 'ดูรายละเอียด ▾') + '</button>';
           html += '</div>';
         }
-        mine.forEach(function (o) {
+        (S.myTab === 'pay' && !S.payDetail[code] ? [] : mine).forEach(function (o) {
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
@@ -525,6 +526,7 @@
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
     else if (act === 'more-tabs') { S.myMore = !(S.myMore || MORE_TAB_KEYS.indexOf(S.myTab) >= 0); keepScroll(); }
+    else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
     else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }

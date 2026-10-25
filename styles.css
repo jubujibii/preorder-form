@@ -242,3 +242,8 @@ a.admin-btn { text-decoration: none; }
 .my-line { padding: 4px 0; }
 .line-name { font-weight: 600; }
 .line-price { font-weight: 400; }
+
+.slip-done { background: #E3F4EA; color: #14633A; border-radius: 12px; padding: 10px 12px; font-weight: 700; display: flex; flex-direction: column; gap: 2px; }
+.slip-done small { font-weight: 400; color: #3f7a58; }
+.slip-redo { display: block; text-align: center; margin-top: 8px; font-size: 14px; color: var(--teal-dark); text-decoration: underline; cursor: pointer; padding: 6px; }
+.slip-redo.is-busy { opacity: .7; pointer-events: none; text-decoration: none; }

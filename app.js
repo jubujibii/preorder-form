@@ -272,9 +272,14 @@
               '<div class="pay-amt">' + baht(r.totalSatang) + '</div>';
             if (!r.paid) {
               var busy = S.slipBusy === sk;
-              html += (r.slipAt ? '<p class="small muted pay-note">ส่งสลิปแล้ว ' + esc(closeText(r.slipAt)) + ' · รอร้านตรวจสอบ</p>' : '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>') +
-                '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : (r.slipAt ? 'ส่งสลิปใหม่' : '📎 แนบสลิป')) +
-                '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label>';
+              var inp = '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '>';
+              if (r.slipAt) {
+                html += '<div class="slip-done">✓ ส่งสลิปแล้ว · รอร้านตรวจสอบ<small>' + esc(closeText(r.slipAt)) + '</small></div>' +
+                  '<label class="slip-redo' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'ส่งผิด? แนบสลิปใหม่') + inp + '</label>';
+              } else {
+                html += '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>' +
+                  '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : '📎 แนบสลิป') + inp + '</label>';
+              }
             }
             html += '</div>';
           });

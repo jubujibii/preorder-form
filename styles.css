@@ -224,3 +224,21 @@ a.admin-btn { text-decoration: none; }
 .line-price strong { color: var(--ink); }
 .my-order .badge { white-space: nowrap; flex: none; }
 .my-order .badge { align-self: flex-start; height: auto; line-height: 1.5; padding: 2px 10px; }
+
+/* ---- ปรับดีไซน์กล่องยอดชำระ ---- */
+.billbox { background: #F4F9F8; border: 1px solid #D5E7E4; border-radius: 14px; padding: 12px 14px 14px; margin: 0 0 8px; }
+.order-no { display: flex; justify-content: space-between; align-items: baseline; padding: 0 0 10px; font-size: 14px; }
+.order-no strong { font-size: 15px; letter-spacing: .2px; }
+.pay-round { padding: 12px 0 0; border-top: 1px dashed #C4DAD6; }
+.pay-round + .pay-round { margin-top: 12px; }
+.pay-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pay-name { font-weight: 700; font-size: 16px; display: flex; flex-direction: column; }
+.pay-name small { font-weight: 400; font-size: 13px; color: var(--muted, #5b6b7b); }
+.pay-amt { font-size: 30px; font-weight: 800; line-height: 1.3; margin: 2px 0 6px; }
+.pay-note { margin: 0 0 8px; }
+.slip-btn { width: 100%; justify-content: center; background: #fff; }
+.group[open] > summary { padding-bottom: 8px; }
+.group > .my-line:first-of-type { border-top: 0; }
+.my-line { padding: 4px 0; }
+.line-name { font-weight: 600; }
+.line-price { font-weight: 400; }

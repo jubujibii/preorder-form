@@ -262,19 +262,21 @@
         html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? S.myTab === 'pay' : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
-          html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span> <strong>' + esc(b.orderNo) + '</strong></div>';
+          html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
           [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
             if (!r) return;
             var sk = code + '|' + x[2];
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
-            html += '<div class="my-order"><span>' + (x[2] === 1 ? 'ยอดโอนรอบ 1 (ค่าสินค้า+ส่งจีน) ' : 'ยอดโอนรอบ 2 ') + '<strong>' + baht(r.totalSatang) + '</strong></span>' + badge + '</div>';
+            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งจีน</small>' : '') + '</div>' + badge + '</div>' +
+              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>';
             if (!r.paid) {
               var busy = S.slipBusy === sk;
-              html += '<div class="slip-row">' + (r.slipAt ? '<span class="small muted">ส่งสลิปแล้ว ' + esc(closeText(r.slipAt)) + ' · รอร้านตรวจสอบ</span>' : '<span class="small muted">โอนแล้วแนบสลิปได้ที่นี่</span>') +
+              html += (r.slipAt ? '<p class="small muted pay-note">ส่งสลิปแล้ว ' + esc(closeText(r.slipAt)) + ' · รอร้านตรวจสอบ</p>' : '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>') +
                 '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : (r.slipAt ? 'ส่งสลิปใหม่' : '📎 แนบสลิป')) +
-                '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label></div>';
+                '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '></label>';
             }
+            html += '</div>';
           });
           html += '</div>';
         }

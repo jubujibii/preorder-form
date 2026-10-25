@@ -10,7 +10,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -90,7 +90,7 @@
       for (var i = lines.length - 1; i >= 0 && left > 0; i--) { if (lines[i].qty <= left) { left -= lines[i].qty; lines[i].status = 'ยกเลิก'; } else { lines[i].qty -= left; left = 0; } }
       res = { ok: true, removed: Math.max(0, cur - p.qty), qty: Math.min(cur, p.qty) };
     } else res = { ok: false, error: 'bad_request', message: 'x' };
-    return new Promise(function (r) { setTimeout(function () { r(res); }, 150); });
+    return new Promise(function (r) { setTimeout(function () { r(res); }, params.get('slow') ? 1800 : 150); });
   }
   function api(action, body) {
     var payload = Object.assign({ action: action, accessToken: L.getAccessToken() }, body || {});
@@ -109,6 +109,8 @@
     memberEl.textContent = S.memberCode;
     var fn = SCREENS[S.screen] || SCREENS.error;
     app.innerHTML = fn();
+    var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
+    if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }
 
   function errBanner() {
@@ -212,15 +214,22 @@
       var html = '<h1>ออเดอร์ของฉัน</h1>' + errBanner();
       if (!d) return html + '<p class="center muted">กำลังโหลด…</p>';
       if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
-      var codes = [];
-      d.orders.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });
       var merged = mergeOrderLines(d.orders);
+      var counts = tabCounts(merged, d.billing);
+      if (!S.myTab) S.myTab = counts.pay > 0 ? 'pay' : 'all';
+      html += '<div class="tabs" role="tablist">' + ORDER_TABS.map(function (t) {
+        return '<button type="button" role="tab" class="tab' + (S.myTab === t.key ? ' active' : '') + '" aria-selected="' + (S.myTab === t.key) + '" data-act="tab" data-tab="' + t.key + '">' + esc(t.label) + (counts[t.key] ? '<span class="tab-n">' + counts[t.key] + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+      var shown = filterMyOrders(merged, d.billing, S.myTab);
+      if (!shown.length) return html + '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p><button class="btn block" data-act="more">กลับไปสั่งของ</button>';
+      var codes = [];
+      shown.forEach(function (o) { if (codes.indexOf(o.preorderCode) < 0) codes.push(o.preorderCode); });
       codes.forEach(function (code) {
-        var mine = merged.filter(function (o) { return o.preorderCode === code; });
+        var mine = shown.filter(function (o) { return o.preorderCode === code; });
         var pieces = mine.reduce(function (n, o) { return n + o.qty; }, 0);
         html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + (S.openMy[code] ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
-        if (b) {
+        if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="small muted">เลขออเดอร์</div><strong>' + esc(b.orderNo) + '</strong>';
           [['รอบ 1', b.round1], ['รอบ 2', b.round2]].forEach(function (x) {
             if (x[1]) html += '<div class="my-order"><span>' + x[0] + ' ยอดที่ต้องโอน ' + baht(x[1].totalSatang) + '</span><span class="badge' + (x[1].paid ? ' ok' : '') + '">' + (x[1].paid ? 'จ่ายแล้ว' : 'รอชำระ') + '</span></div>';
@@ -229,17 +238,19 @@
         }
         mine.forEach(function (o) {
           var ck = qtyKey(o.productId, o.option);
-          html += '<div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
+          var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
+          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span>' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + '</span><span class="badge">' + esc(o.status) + '</span></div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
-            html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
-              '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>บันทึก</button><button type="button" class="btn" data-act="edit-cancel">ปิด</button></div>' +
+            html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
+              '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +
               '<p class="small muted">แก้ได้เฉพาะลดจำนวน ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</p></div>';
+          } else if (o.canCancel && S.confirmCancel === ck) {
+            html += '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันยกเลิก') + '</button><button type="button" class="btn" data-act="cancel-no"' + (S.busy ? ' disabled' : '') + '>ไม่ยกเลิก</button></div>';
           } else if (o.canCancel) {
-            if (o.qty > 1 && S.confirmCancel !== ck) html += '<button type="button" class="linkbtn" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '">ลดจำนวน</button> ';
-            html += S.confirmCancel === ck
-              ? '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>ยืนยันยกเลิก</button><button type="button" class="btn" data-act="cancel-no">ไม่ยกเลิก</button></div>'
-              : '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิกรายการนี้</button>';
+            html += '<div class="line-actions">' + (o.qty > 1 ? '<button type="button" class="linkbtn" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '">แก้ไข</button>' : '') +
+              '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิกรายการ</button></div>';
           }
+          html += '</div>';
         });
         html += '</details>';
       });
@@ -334,7 +345,7 @@
   }
 
   function showMy() {
-    S.my = null; setScreen('my');
+    S.my = null; S.myTab = ''; S.edit = null; S.confirmCancel = ''; setScreen('my');
     api('myOrders').then(function (res) {
       if (!res.ok) throw new Error();
       S.my = res; render();
@@ -346,7 +357,7 @@
     S.busy = true; S.error = ''; render();
     api('cancelOrder', { productId: parts[0], option: parts[1] || '' }).then(function (res) {
       S.busy = false; S.confirmCancel = '';
-      if (!res.ok) { S.error = res.message || 'ยกเลิกไม่สำเร็จ ลองใหม่อีกครั้ง'; }
+      if (!res.ok) { S.error = res.message || 'ยกเลิกไม่สำเร็จ ลองใหม่อีกครั้ง'; } else toast('ยกเลิกรายการแล้ว ✓');
       return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
     }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; }).then(function () {
       var y = window.scrollY; render(); window.scrollTo(0, y);
@@ -358,11 +369,19 @@
     S.busy = true; S.error = ''; render();
     api('reduceOrder', { productId: parts[0], option: parts[1] || '', qty: target }).then(function (res) {
       S.busy = false;
-      if (res.ok) S.edit = null; else S.error = res.message || 'แก้จำนวนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      if (res.ok) { S.edit = null; toast('บันทึกแล้ว ✓'); } else S.error = res.message || 'แก้จำนวนไม่สำเร็จ ลองใหม่อีกครั้ง';
       return api('myOrders').then(function (m) { if (m.ok) S.my = m; });
     }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; }).then(function () {
       var y = window.scrollY; render(); window.scrollTo(0, y);
     });
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = msg; el.className = 'show';
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.className = ''; }, 2600);
   }
 
   function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
@@ -411,6 +430,7 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }
     else if (act === 'edit-inc') { S.edit.qty += 1; keepScroll(); }

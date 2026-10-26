@@ -258,7 +258,7 @@
           '<span class="tile-ico">' + ICONS[k] + (counts[k] ? '<span class="tile-n">' + counts[k] + '</span>' : '') + '</span>' +
           '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : '') + '</span></button>';
       }
-      var refundPending = pendingRefundCount(merged, d.billing);
+      var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;
       html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
         '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
@@ -443,9 +443,9 @@
     if (linkTab && ORDER_TABS.some(function (t) { return t.key === linkTab; })) { S.myTab = linkTab; S.myMore = MORE_TAB_KEYS.indexOf(linkTab) >= 0; }
     linkTab = ''; S.edit = null; S.confirmCancel = ''; setScreen('my');
     api('myOrders').then(function (res) {
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error('server:' + (res.error || 'unknown'));
       S.my = res; render();
-    }).catch(function () { S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง'; S.my = { orders: [], billing: [] }; render(); });
+    }).catch(function (e) { S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง (รหัส: ' + String((e && e.message) || e || 'unknown').slice(0, 80) + ')'; S.my = { orders: [], billing: [] }; try { render(); } catch (e2) { /* ไม่ให้ error ซ้อน */ } });
   }
 
   function cancelLine(k) {

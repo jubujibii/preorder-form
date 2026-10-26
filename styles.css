@@ -304,3 +304,15 @@ a.admin-btn { text-decoration: none; }
 /* สินค้าเดียวกันหลายตัวเลือก: แถวต่อจากแรกไม่ซ้ำชื่อ ชิดกลุ่มเดียวกัน */
 .my-line.same-product { border-top: 0; padding-top: 2px; }
 .opt-tag.alone { margin-left: 14px; }
+
+/* สินค้าเดียวกันหลายตัวเลือก: หัวชื่อสินค้าหนึ่งครั้ง แล้วแถวตัวเลือกย่อหน้าใต้หัว */
+.prod-head { font-weight: 700; font-size: 16px; padding: 12px 0 0; border-top: 1px solid var(--line); }
+.group > .prod-head:first-of-type { border-top: 0; }
+.my-line.in-cluster { border-top: 0; padding: 6px 0 6px 12px; border-left: 3px solid #D5E7E4; margin: 4px 0 0 2px; }
+.my-line.in-cluster .line-name { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.my-line.in-cluster .opt-tag { margin: 0; }
+.unit-inline { font-size: 14px; color: var(--muted, #667); }
+.my-line.in-cluster .line-unit { display: none; }
+.my-line.in-cluster .line-actions { grid-column: 1 / -1; justify-content: flex-end; }
+.my-line.in-cluster .line-name { flex-direction: row; justify-content: flex-start; align-items: center; flex-wrap: wrap; }
+.my-line.in-cluster { align-items: center; }

@@ -323,15 +323,17 @@
         var ordered = S.myTab === 'all' ? cluster(live).concat(cluster(dead)) : cluster(mine);
         ordered.forEach(function (o, idx) {
           var sameAsPrev = idx > 0 && ordered[idx - 1].productId === o.productId && (idx !== live.length || S.myTab !== 'all');
+          var multi = ordered.filter(function (x) { return x.productId === o.productId && (x.status === 'ยกเลิก') === (o.status === 'ยกเลิก'); }).length > 1 && !!o.option;
+          if (multi && !sameAsPrev) html += '<div class="prod-head">' + esc(o.productName) + '</div>';
           if (S.myTab === 'all' && live.length && dead.length && idx === live.length) html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>';
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           var unit = o.priceThb != null ? o.priceThb : null;
           var badgeTxt = (o.status === 'รับออเดอร์' || S.myTab !== 'all') ? '' : '<span class="badge">' + esc(o.status) + '</span>';
-          html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (sameAsPrev ? ' same-product' : '') + '">' +
-            '<div class="line-name">' + (sameAsPrev && o.option ? '' : esc(o.productName)) + (o.option ? ' <span class="opt-tag' + (sameAsPrev ? ' alone' : '') + '">' + esc(o.option) + '</span>' : '') + '</div>' +
+          html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
+            '<div class="line-name">' + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
-            '<div class="line-unit">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div>';
+            '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +

@@ -276,7 +276,7 @@
         var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
         var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">รอบปิดพรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';

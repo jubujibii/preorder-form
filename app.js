@@ -183,7 +183,7 @@
 
     order: function () {
       if (S.products.length === 0) {
-        return payBanner() + '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
+        return payBanner() + '<h1>ยังไม่มี Lot ที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิด Lot ใหม่ รายการจะขึ้นที่หน้านี้</p>' +
           '<button class="btn block" data-act="refresh">รีเฟรชรายการ</button>' +
           myOrdersBtn();
       }
@@ -202,7 +202,7 @@
         return d || String(a.code).localeCompare(String(b.code), 'th', { numeric: true });
       });
       groups.forEach(function (g) {
-        html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(g.code) + '</span>' +
+        html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + '</span>' +
           '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><ul class="items">';
         g.items.forEach(function (p) {
           var opts = p.options.length ? p.options : [''];
@@ -276,7 +276,7 @@
         var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
         var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">รอบปิดพรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -427,7 +427,7 @@
         S.qty = {}; S.requestKey = ''; S.requestId = null;
         return setScreen('done');
       }
-      if (res.error === 'closed') { S.error = 'พรีนี้ปิดรับแล้ว ออเดอร์ของคุณยังไม่ถูกบันทึก'; return loadBootstrap().then(function () { render(); }); }
+      if (res.error === 'closed') { S.error = 'Lot นี้ปิดรับแล้ว ออเดอร์ของคุณยังไม่ถูกบันทึก'; return loadBootstrap().then(function () { render(); }); }
       if (res.error === 'not_registered') return setScreen('register');
       S.error = res.error === 'bad_request' ? (res.message || 'ข้อมูลไม่ถูกต้อง ตรวจรายการแล้วลองใหม่') : 'ส่งออเดอร์ไม่สำเร็จ กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ';
       render(); refreshTotal();

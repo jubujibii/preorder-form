@@ -27,13 +27,13 @@ function mergeOrderLines(rows) {
 
 // แท็บในหน้า "ออเดอร์ของฉัน" (จัดกลุ่มจากสถานะรายการในชีต; ที่ต้องชำระดูจากยอดที่ร้านแจ้งแล้วแต่ยังไม่จ่าย)
 var ORDER_TABS = [
-  { key: 'all', label: 'ทั้งหมด' }, { key: 'pay', label: 'ที่ต้องชำระ' }, { key: 'new', label: 'รับออเดอร์' },
+  { key: 'all', label: 'ทั้งหมด' }, { key: 'pay', label: 'ที่ต้องชำระ' }, { key: 'verify', label: 'รอตรวจสอบ' }, { key: 'new', label: 'รับออเดอร์' },
   { key: 'ship', label: 'ที่ต้องจัดส่ง' }, { key: 'inbound', label: 'ที่ต้องได้รับ' }, { key: 'done', label: 'สำเร็จ' },
   { key: 'refund', label: 'คืนเงิน' }, { key: 'cancel', label: 'ยกเลิก' },
 ];
 // 4 แท็บหลักแสดงเป็นไอคอนด้านบน (ที่ต้องชำระเด่นสุด); ที่เหลือซ่อนไว้ใต้ "ดูเพิ่มเติม"
 var MAIN_TAB_KEYS = ['pay', 'new', 'ship', 'inbound'];
-var MORE_TAB_KEYS = ['all', 'done', 'refund', 'cancel'];
+var MORE_TAB_KEYS = ['verify', 'all', 'done', 'refund', 'cancel'];
 var ORDER_TAB_BY_STATUS = {
   'รับออเดอร์': 'new', 'สั่งของแล้ว': 'ship', 'ถึงไทย': 'ship', 'แพ็กแล้ว': 'ship',
   'ส่งแล้ว': 'inbound', 'สำเร็จ': 'done', 'คืนเงิน': 'refund', 'ยกเลิก': 'cancel',
@@ -43,29 +43,42 @@ function orderTabOf(status) {
   return Object.prototype.hasOwnProperty.call(ORDER_TAB_BY_STATUS, status) ? ORDER_TAB_BY_STATUS[status] : 'new';
 }
 
-function unpaidPreorders(billing) {
+// สถานะการชำระรายพรี: pay = มีรอบที่แจ้งยอดแล้วแต่ยังไม่จ่ายและยังไม่แนบสลิป; verify = ที่ค้างทั้งหมดแนบสลิปแล้ว รอร้านตรวจ
+function paymentStateByPreorder(billing) {
   var out = {};
   billing.forEach(function (b) {
-    if ((b.round1 && !b.round1.paid) || (b.round2 && !b.round2.paid)) out[b.preorderCode] = true;
+    var open = [b.round1, b.round2].filter(function (r) { return r && !r.paid; });
+    if (!open.length) return;
+    out[b.preorderCode] = open.some(function (r) { return !r.slipAt; }) ? 'pay' : 'verify';
   });
+  return out;
+}
+
+function unpaidPreorders(billing) {
+  var st = paymentStateByPreorder(billing), out = {};
+  Object.keys(st).forEach(function (k) { out[k] = true; });
   return out;
 }
 
 function filterMyOrders(lines, billing, tab) {
   if (tab === 'all') return lines.slice();
-  var unpaid = unpaidPreorders(billing);
+  var st = paymentStateByPreorder(billing);
   return lines.filter(function (l) {
-    // รายการอยู่แท็บเดียว: ถ้าพรีนั้นมียอดค้างชำระ (และรายการยังไม่ยกเลิก/คืนเงิน) จะอยู่แท็บ "ที่ต้องชำระ" เท่านั้น
-    var inPay = !!unpaid[l.preorderCode] && l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
-    if (tab === 'pay') return inPay;
-    return !inPay && orderTabOf(l.status) === tab;
+    // รายการอยู่แท็บเดียว: พรีที่มียอดค้าง (และรายการยังไม่ยกเลิก/คืนเงิน) อยู่ "ที่ต้องชำระ" หรือ "รอตรวจสอบ" เท่านั้น
+    var live = l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
+    var pay = live ? st[l.preorderCode] : undefined;
+    if (tab === 'pay' || tab === 'verify') return pay === tab;
+    return !pay && orderTabOf(l.status) === tab;
   });
 }
 
+// ตัวเลขบนแท็บ = จำนวนออเดอร์ (พรี) ที่อยู่ในแท็บนั้น ไม่ใช่จำนวนชิ้น
 function tabCounts(lines, billing) {
   var out = {};
   ORDER_TABS.forEach(function (t) {
-    out[t.key] = filterMyOrders(lines, billing, t.key).reduce(function (n, l) { return n + l.qty; }, 0);
+    var seen = {};
+    filterMyOrders(lines, billing, t.key).forEach(function (l) { seen[l.preorderCode] = true; });
+    out[t.key] = Object.keys(seen).length;
   });
   return out;
 }

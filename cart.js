@@ -52,7 +52,7 @@ var ORDER_TABS = [
 var MAIN_TAB_KEYS = ['pay', 'new', 'ship', 'inbound'];
 var MORE_TAB_KEYS = ['all', 'done', 'refund', 'cancel'];
 var ORDER_TAB_BY_STATUS = {
-  'รับออเดอร์': 'new', 'สั่งของแล้ว': 'ship', 'ถึงไทย': 'ship', 'แพ็กแล้ว': 'ship',
+  'รับออเดอร์': 'new', 'สั่งของแล้ว': 'ship', 'ออกจากจีน': 'ship', 'ถึงไทย': 'ship', 'แพ็กแล้ว': 'ship',
   'ส่งแล้ว': 'inbound', 'สำเร็จ': 'done', 'คืนเงิน': 'refund', 'ยกเลิก': 'cancel',
 };
 
@@ -98,6 +98,17 @@ function tabCounts(lines, billing) {
     out[t.key] = Object.keys(seen).length;
   });
   return out;
+}
+
+// จำนวนออเดอร์ (พรี) ที่มีรายการ "คืนเงิน" และร้านยังไม่ได้โอนคืน (ใช้โชว์ตัวเลขบนแท็บคืนเงิน หายไปเมื่อคืนครบ)
+function pendingRefundCount(lines, billing) {
+  var seen = {};
+  lines.forEach(function (l) {
+    if (l.status !== 'คืนเงิน') return;
+    var b = billing.filter(function (x) { return x.preorderCode === l.preorderCode; })[0];
+    if (!(b && b.refund && b.refund.paid)) seen[l.preorderCode] = true;
+  });
+  return Object.keys(seen).length;
 }
 
 // ยอดค้างชำระจากข้อมูลบิลของหน้า "ออเดอร์ของฉัน" (ไม่นับรอบที่แนบสลิปแล้ว)

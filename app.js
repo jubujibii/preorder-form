@@ -117,6 +117,7 @@
   function setScreen(name) { S.screen = name; S.error = ''; S.notice = ''; render(); window.scrollTo(0, 0); }
 
   function render() {
+    document.body.setAttribute('data-screen', S.screen);
     memberEl.hidden = !S.memberCode;
     memberEl.textContent = S.memberCode;
     var fn = SCREENS[S.screen] || SCREENS.error;
@@ -239,7 +240,7 @@
 
     my: function () {
       var d = S.my;
-      var html = '<h1>ออเดอร์ของฉัน</h1>' + errBanner();
+      var html = '<h1 class="sr-only">ออเดอร์ของฉัน</h1>' + errBanner();
       if (!d) return html + '<p class="center muted">กำลังโหลด…</p>';
       if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var merged = mergeOrderLines(d.orders);
@@ -599,6 +600,9 @@
     var d = ev.target;
     if (d && d.classList && d.classList.contains('group')) (d.getAttribute('data-scope') === 'my' ? S.openMy : S.open)[d.getAttribute('data-code')] = d.open;
   }, true);
+
+  var topBack = document.querySelector('[data-top-back]');
+  if (topBack) topBack.addEventListener('click', function () { loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); }); });
 
   app.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');

@@ -320,6 +320,12 @@
         var waiting = filterMyOrders(merged, d.billing, 'verify');
         html += shown.length ? renderGroups(shown) : (waiting.length ? '<p class="muted center empty">ไม่มียอดที่ต้องชำระ</p>' : empty);
         if (waiting.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>รอตรวจสอบ</h2><p class="small muted sec-note">แนบสลิปแล้ว รอร้านตรวจสอบยอด</p>' + renderGroups(waiting);
+      } else if (S.myTab === 'ship' && shown.length) {
+        // ที่ต้องจัดส่ง แยกหัวข้อตามสถานะ เรียงใกล้ถึงมือลูกค้าที่สุดก่อน: แพ็กแล้ว > ถึงไทย > ออกจากจีน > สั่งของแล้ว
+        [['แพ็กแล้ว', 'แพ็กแล้ว รอจัดส่ง', 'ร้านแพ็กของแล้ว กำลังจะส่งถึงคุณ', 'ok'], ['ถึงไทย', 'ถึงไทยแล้ว', 'ของถึงไทยแล้ว รอร้านแพ็กและส่ง', 'ok'], ['ออกจากจีน', 'ออกจากจีนแล้ว', 'ของออกจากจีน กำลังเดินทางมาไทย', 'wait'], ['สั่งของแล้ว', 'สั่งของแล้ว', 'ร้านสั่งของจากจีนแล้ว รอของออกจากจีน', 'wait']].forEach(function (g) {
+          var part = shown.filter(function (o) { return o.status === g[0]; });
+          if (part.length) html += '<h2 class="tab-title"><span class="tab-dot ' + g[3] + '"></span>' + g[1] + '</h2><p class="small muted sec-note">' + g[2] + '</p>' + renderGroups(part);
+        });
       } else {
         html += shown.length ? renderGroups(shown) : empty;
       }

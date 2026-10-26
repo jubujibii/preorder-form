@@ -258,3 +258,9 @@ a.admin-btn { text-decoration: none; }
 .my-btn, .admin-btn { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; font-weight: 700; }
 .my-btn { background: var(--teal-dark); color: #fff; border-color: var(--teal-dark); margin-top: 14px; }
 .my-btn svg, .admin-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.paybanner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #FFE9A3; border: 1.5px solid #D99A00; border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; }
+.pb-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pb-txt strong { font-size: 17px; color: #5C3D00; }
+.pb-txt span { font-size: 13px; color: #7A5200; }
+.pb-btn { flex: none; background: #fff; border-color: #D99A00; color: #5C3D00; font-weight: 700; padding: 8px 14px; min-height: 40px; }

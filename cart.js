@@ -100,6 +100,15 @@ function tabCounts(lines, billing) {
   return out;
 }
 
+// ยอดค้างชำระจากข้อมูลบิลของหน้า "ออเดอร์ของฉัน" (ไม่นับรอบที่แนบสลิปแล้ว)
+function pendingPayment(billing) {
+  var count = 0, total = 0;
+  billing.forEach(function (b) {
+    [b.round1, b.round2].forEach(function (r) { if (r && !r.paid && !r.slipAt) { count++; total += r.totalSatang; } });
+  });
+  return { count: count, totalSatang: total };
+}
+
 // ลิงก์เปิดแชท LINE OA ของร้าน (เพื่อนของร้านจะเข้าแชท 1:1 ทันที ไม่มีข้อความพิมพ์ให้)
 function adminChatUrl(oaBasicId) {
   return 'https://line.me/R/ti/p/' + encodeURIComponent(oaBasicId);

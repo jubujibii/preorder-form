@@ -11,7 +11,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, pending: { count: 0, totalSatang: 0 }, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -73,7 +73,7 @@
       { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     var res;
-    if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products };
+    if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products, pendingPay: params.get('pay') === '1' ? { count: 2, totalSatang: 83000 } : { count: 0, totalSatang: 0 } };
     else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
     else if (p.action === 'placeOrder') {
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
@@ -129,6 +129,13 @@
   function myOrdersBtn() {
     return '<button type="button" class="btn block my-btn" data-act="my">' + RECEIPT_ICON + '<span>ดูออเดอร์ของฉัน</span></button>';
   }
+  // แถบยอดค้างชำระบนหน้าสั่งของ: ใช้ข้อมูลจากหน้า "ออเดอร์ของฉัน" ถ้าโหลดไว้แล้ว (ล่าสุดกว่า) ไม่งั้นใช้ค่าจากตอนเปิดหน้า
+  function payBanner() {
+    var p = S.my && S.my.billing ? pendingPayment(S.my.billing) : S.pending;
+    if (!p || !p.count) return '';
+    return '<div class="paybanner" role="status"><div class="pb-txt"><strong>มียอดค้างชำระ ' + baht(p.totalSatang) + '</strong><span>' + p.count + ' รายการ · โอนแล้วแนบสลิปได้ในหน้าออเดอร์ของฉัน</span></div>' +
+      '<button type="button" class="btn pb-btn" data-act="my">ดูและชำระ</button></div>';
+  }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
   var SCREENS = {
@@ -168,7 +175,7 @@
 
     order: function () {
       if (S.products.length === 0) {
-        return '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
+        return payBanner() + '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
           '<button class="btn block" data-act="refresh">รีเฟรชรายการ</button>' +
           myOrdersBtn();
       }
@@ -178,7 +185,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
+      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<div class="callout" role="note"><strong>ยอดด้านล่างคือ "ค่าสินค้า" เท่านั้น</strong>' +
         '<p>ยังไม่รวม <b>ค่าส่งจากจีน · ค่านำเข้า · ค่าส่งในไทย</b> ร้านจะแจ้งยอดที่ต้องโอนให้ทางแชท LINE ในวันที่ปิดพรี</p></div>' + errBanner();
@@ -354,6 +361,7 @@
       if (!res.ok) throw new Error(res.message || res.error);
       S.products = res.products;
       S.memberCode = res.memberCode || '';
+      S.pending = res.pendingPay || { count: 0, totalSatang: 0 };
       return res;
     });
   }

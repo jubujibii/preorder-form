@@ -81,6 +81,13 @@
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
+      if (params.get('refund')) {
+        res.billing[0].round1 = { totalSatang: 54000, paid: true, slipAt: null };
+        res.orders.push({ preorderCode: '090426', productId: 'x1', productName: 'ที่นอนแมวทรงโดนัท', option: 'ฟ้า', qty: 2, status: 'คืนเงิน', priceThb: 66, at: '2026-10-25T01:00:00Z', canCancel: false },
+          { preorderCode: '090426', productId: 'x2', productName: 'อาหารแมว', option: 'ไก่', qty: 1, status: 'คืนเงิน', priceThb: 55, at: '2026-10-25T01:00:00Z', canCancel: false },
+          { preorderCode: '090426', productId: 'x3', productName: 'ที่นอนแมวทรงโดนัท', option: 'ชมพู', qty: 3, status: 'ยกเลิก', priceThb: 66, at: '2026-10-25T01:00:00Z', canCancel: false });
+        res.billing[0].refund = params.get('refund') === 'paid' ? { paid: true, amountSatang: 18700, at: '2026-10-26T03:00:00Z' } : { paid: false, amountSatang: 18700, at: null };
+      }
     } else if (p.action === 'uploadSlip') {
       if (params.get('slipfail') === '1') res = { ok: false, error: 'server_error', message: 'x' };
       else { mockDb.slip[p.round] = new Date().toISOString(); res = { ok: true, slipAt: mockDb.slip[p.round] }; }
@@ -185,10 +192,9 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div>' +
+      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="my">ออเดอร์ของฉัน</button><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
-        '<div class="callout" role="note"><strong>ยอดด้านล่างคือ "ค่าสินค้า" เท่านั้น</strong>' +
-        '<p>ยังไม่รวม <b>ค่าส่งจากจีน · ค่านำเข้า · ค่าส่งในไทย</b> ร้านจะแจ้งยอดที่ต้องโอนให้ทางแชท LINE ในวันที่ปิดพรี</p></div>' + errBanner();
+        '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> ค่าส่งและค่านำเข้า ร้านจะแจ้งทางแชท LINE</p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
       groups.sort(function (a, b) {
         var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();
@@ -211,7 +217,7 @@
         });
         html += '</ul></details>';
       });
-      html += myOrdersBtn() +
+      html +=
         '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
         '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
       return html;
@@ -252,11 +258,12 @@
           '<span class="tile-ico">' + ICONS[k] + (counts[k] ? '<span class="tile-n">' + counts[k] + '</span>' : '') + '</span>' +
           '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : '') + '</span></button>';
       }
+      var refundPending = pendingRefundCount(merged, d.billing);
       var moreOpen = S.myMore;
-      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + '</button></div>' +
+      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
         '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
         (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
-          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + '' + '</button>';
+          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (k === 'refund' && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
       function renderGroups(list) {
@@ -265,10 +272,12 @@
         var shown = list;
       codes.forEach(function (code) {
         var mine = shown.filter(function (o) { return o.preorderCode === code; });
-        var pieces = mine.reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
+        var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
+        var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
+        var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">พรี ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
-        if (b && (S.myTab === 'all' || S.myTab === 'pay')) {
+        if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
           [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
@@ -293,15 +302,19 @@
           });
           html += '</div>';
         }
-        if (b && b.refund && (S.myTab === 'refund' || S.myTab === 'all') && mine.some(function (o) { return o.status === 'คืนเงิน'; })) {
-          html += b.refund.paid
-            ? '<div class="slip-done">✓ ร้านคืนเงินให้แล้ว' + (b.refund.amountSatang != null ? ' ' + baht(b.refund.amountSatang) : '') + (b.refund.at ? '<small>' + esc(closeText(b.refund.at)) + '</small>' : '') + '</div>'
-            : '<p class="small muted pay-note">รายการนี้ร้านจะโอนเงินคืนให้ เมื่อโอนแล้วสถานะจะขึ้นที่นี่</p>';
+        var refLines = mine.filter(function (o) { return o.status === 'คืนเงิน'; });
+        if (b && b.refund && refLines.length && (S.myTab === 'refund' || S.myTab === 'all')) {
+          var refSum = refLines.reduce(function (n, o) { return n + (o.priceThb || 0) * o.qty * 100; }, 0);
+          var refAmt = b.refund.amountSatang != null ? b.refund.amountSatang : refSum;
+          html += '<div class="refundbox' + (b.refund.paid ? ' done' : '') + '"><div class="ref-order"><span>เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div><div class="ref-top"><div><div class="ref-label">ยอดที่ร้านคืนให้</div><div class="ref-amt">' + baht(refAmt) + '</div></div>' +
+            '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
+            (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
-        mine.forEach(function (o) {
+        (S.myTab === 'all' ? live.concat(dead) : mine).forEach(function (o, idx) {
+          if (S.myTab === 'all' && live.length && dead.length && idx === live.length) html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>';
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
-          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span class="line-name">' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + (o.priceThb != null ? '<span class="line-price">' + baht(o.priceThb * 100) + ' × ' + o.qty + ' = <strong>' + baht(o.priceThb * o.qty * 100) + '</strong></span>' : '') + '</span>' + (o.status === 'รับออเดอร์' ? '' : '<span class="badge">' + esc(o.status) + '</span>') + '</div>';
+          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span class="line-name">' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + (o.priceThb != null ? '<span class="line-price">' + baht(o.priceThb * 100) + ' × ' + o.qty + ' = <strong>' + baht(o.priceThb * o.qty * 100) + '</strong></span>' : '') + '</span>' + (o.status === 'รับออเดอร์' || S.myTab !== 'all' ? '' : '<span class="badge">' + esc(o.status) + '</span>') + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +

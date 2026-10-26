@@ -264,3 +264,24 @@ a.admin-btn { text-decoration: none; }
 .pb-txt strong { font-size: 17px; color: #5C3D00; }
 .pb-txt span { font-size: 13px; color: #7A5200; }
 .pb-btn { flex: none; background: #fff; border-color: #D99A00; color: #5C3D00; font-weight: 700; padding: 8px 14px; min-height: 40px; }
+
+/* คืนเงิน: การ์ดสรุปยอด + ตัวเลขค้างบนชิป */
+.refundbox { background: #FFF8E1; border: 1px solid #F1DFA6; border-radius: 14px; padding: 12px 14px; margin: 0 0 8px; }
+.refundbox.done { background: #E8F5EE; border-color: #BFE0CE; }
+.ref-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ref-label { font-size: 13px; color: #6b6b6b; }
+.ref-amt { font-size: 26px; font-weight: 800; line-height: 1.2; }
+.ref-note { margin-top: 6px; font-size: 14px; color: #5b5b5b; }
+.chip-n, .more-link .chip-n { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #E5484D; color: #fff; font-size: 12px; font-weight: 700; text-align: center; vertical-align: middle; }
+.chip.active .chip-n { background: #fff; color: #E5484D; }
+.cancelled-head { margin: 10px 0 2px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: #8a8a8a; }
+
+/* หน้าสั่งของ: เรียบขึ้น */
+.title-actions { display: flex; gap: 8px; flex: none; }
+.price-note { margin: 2px 0 12px; font-size: 14px; color: #5b6b6a; line-height: 1.5; }
+.paybanner { background: #FFF3C4; border-width: 1px; }
+.ref-order { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #6b6b6b; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed rgba(0,0,0,.12); }
+.ref-order strong { color: var(--ink, #14253a); font-size: 14px; }
+.titlerow { flex-direction: column; align-items: flex-start; gap: 8px; }
+.titlerow h1 { white-space: nowrap; margin-bottom: 0; }
+.price-note { margin-top: 10px; }

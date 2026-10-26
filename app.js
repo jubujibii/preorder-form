@@ -142,8 +142,8 @@
   function payBanner() {
     var p = S.my && S.my.billing ? pendingPayment(S.my.billing) : S.pending;
     if (!p || !p.count) return '';
-    return '<div class="paybanner" role="status"><div class="pb-txt"><strong>มียอดค้างชำระ ' + baht(p.totalSatang) + '</strong><span>' + p.count + ' รายการ · โอนแล้วแนบสลิปได้ในหน้าออเดอร์ของฉัน</span></div>' +
-      '<button type="button" class="btn pb-btn" data-act="my">ดูและชำระ</button></div>';
+    return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><strong>มียอดค้างชำระ ' + baht(p.totalSatang) + '</strong><span>' + p.count + ' รายการ · โอนแล้วแนบสลิปได้ในหน้าออเดอร์ของฉัน</span></div>' +
+      '<button type="button" class="btn pb-btn" data-act="my">ดูและชำระ</button></div></div>';
   }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 

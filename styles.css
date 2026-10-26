@@ -251,3 +251,6 @@ a.admin-btn { text-decoration: none; }
 .slip-fail { background: #FDECEA; border: 1.5px solid #E0573A; color: #9B1C0F; border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px; display: flex; flex-direction: column; gap: 3px; }
 .slip-fail strong { font-size: 16px; }
 .slip-fail .small { color: #7a2a20; }
+
+.tab-dot.wait { background: #D99A00; }
+.sec-note { margin: -4px 0 8px; }

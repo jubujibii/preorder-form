@@ -19,10 +19,27 @@ function mergeOrderLines(rows) {
   var index = {};
   rows.forEach(function (r) {
     var k = JSON.stringify([r.preorderCode, r.productId, r.productName, r.option, r.status]);
-    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, canCancel: !!r.canCancel, qty: 0 }); }
+    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
     out[index[k]].qty += r.qty;
+    if (r.at && (!out[index[k]].at || r.at > out[index[k]].at)) out[index[k]].at = r.at;
   });
   return out;
+}
+
+// เรียงจากใหม่ไปเก่า (ไม่มีเวลาไว้ท้ายสุด; เวลาเท่ากันคงลำดับเดิม)
+function sortNewestFirst(lines) {
+  return lines.map(function (l, i) { return { l: l, i: i }; }).sort(function (a, b) {
+    var x = a.l.at || '', y = b.l.at || '';
+    if (x !== y) return x < y ? 1 : -1;
+    return a.i - b.i;
+  }).map(function (e) { return e.l; });
+}
+
+// รหัสพรีเรียงตามออเดอร์ล่าสุดของพรีนั้น (ใหม่ไปเก่า)
+function newestFirstCodes(lines) {
+  var codes = [];
+  sortNewestFirst(lines).forEach(function (l) { if (codes.indexOf(l.preorderCode) < 0) codes.push(l.preorderCode); });
+  return codes;
 }
 
 // แท็บในหน้า "ออเดอร์ของฉัน" (จัดกลุ่มจากสถานะรายการในชีต; ที่ต้องชำระดูจากยอดที่ร้านแจ้งแล้วแต่ยังไม่จ่าย)
@@ -33,7 +50,7 @@ var ORDER_TABS = [
 ];
 // 4 แท็บหลักแสดงเป็นไอคอนด้านบน (ที่ต้องชำระเด่นสุด); ที่เหลือซ่อนไว้ใต้ "ดูเพิ่มเติม"
 var MAIN_TAB_KEYS = ['pay', 'new', 'ship', 'inbound'];
-var MORE_TAB_KEYS = ['verify', 'all', 'done', 'refund', 'cancel'];
+var MORE_TAB_KEYS = ['all', 'done', 'refund', 'cancel'];
 var ORDER_TAB_BY_STATUS = {
   'รับออเดอร์': 'new', 'สั่งของแล้ว': 'ship', 'ถึงไทย': 'ship', 'แพ็กแล้ว': 'ship',
   'ส่งแล้ว': 'inbound', 'สำเร็จ': 'done', 'คืนเงิน': 'refund', 'ยกเลิก': 'cancel',
@@ -61,9 +78,9 @@ function unpaidPreorders(billing) {
 }
 
 function filterMyOrders(lines, billing, tab) {
-  if (tab === 'all') return lines.slice();
+  if (tab === 'all') return sortNewestFirst(lines);
   var st = paymentStateByPreorder(billing);
-  return lines.filter(function (l) {
+  return sortNewestFirst(lines).filter(function (l) {
     // รายการอยู่แท็บเดียว: พรีที่มียอดค้าง (และรายการยังไม่ยกเลิก/คืนเงิน) อยู่ "ที่ต้องชำระ" หรือ "รอตรวจสอบ" เท่านั้น
     var live = l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
     var pay = live ? st[l.preorderCode] : undefined;

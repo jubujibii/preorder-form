@@ -194,7 +194,7 @@
       });
       var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="my">ออเดอร์ของฉัน</button><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
-        '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> ค่าส่งและค่านำเข้า ร้านจะแจ้งทางแชท LINE</p>' + errBanner();
+        '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> ยังไม่รวมค่าส่งและค่านำเข้า</p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
       groups.sort(function (a, b) {
         var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();

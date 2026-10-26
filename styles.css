@@ -285,3 +285,22 @@ a.admin-btn { text-decoration: none; }
 .titlerow { flex-direction: column; align-items: flex-start; gap: 8px; }
 .titlerow h1 { white-space: nowrap; margin-bottom: 0; }
 .price-note { margin-top: 10px; }
+
+/* รายการสินค้าในออเดอร์ของฉัน: กระชับ ชื่อ+ยอดอยู่แถวเดียว ปุ่มแก้ไข/ยกเลิกเป็นปุ่มเล็ก */
+.my-line { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 2px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--line); }
+.group > .my-line:first-of-type, .refundbox + .my-line { border-top: 0; }
+.my-line .line-name { display: block; font-weight: 700; font-size: 16px; line-height: 1.35; min-width: 0; overflow-wrap: anywhere; }
+.opt-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #E8F1F0; color: var(--teal-dark); font-size: 13px; font-weight: 600; vertical-align: 1px; }
+.my-line .line-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.my-line .line-total { font-size: 16px; }
+.my-line .line-unit { font-size: 14px; color: var(--muted, #667); }
+.my-line .line-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0; }
+.my-line .line-actions .linkbtn { text-decoration: none; font-size: 13px; padding: 4px 12px; border: 1px solid var(--teal-dark); border-radius: 999px; min-height: 0; }
+.my-line .line-actions .danger-link { color: #B3261E; border-color: #E3B1AD; padding: 4px 12px; }
+.my-line .edit-qty, .my-line .cancel-confirm { grid-column: 1 / -1; margin-top: 8px; }
+.my-line.is-cancelled .line-name, .my-line.is-cancelled .line-total, .my-line.is-cancelled .line-unit { text-decoration: line-through; opacity: .5; }
+.my-line .badge { align-self: center; }
+
+/* สินค้าเดียวกันหลายตัวเลือก: แถวต่อจากแรกไม่ซ้ำชื่อ ชิดกลุ่มเดียวกัน */
+.my-line.same-product { border-top: 0; padding-top: 2px; }
+.opt-tag.alone { margin-left: 14px; }

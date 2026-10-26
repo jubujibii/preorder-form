@@ -55,6 +55,7 @@
   // ---------- LIFF / API (มีโหมดจำลอง ?mock=1) ----------
   var L = window.liff;
   var mockDb = { registered: params.get('registered') === '1', orders: [], member: 'P2P-N00000', slip: {} };
+  if (params.get('seed') === '1') mockDb.orders = [{ productId: '090426-P01', option: 'ฟ้า', qty: 10, status: 'รับออเดอร์', at: new Date().toISOString() }, { productId: '090426-P02', option: '', qty: 1, status: 'รับออเดอร์', at: new Date().toISOString() }, { productId: '090426-P01', option: 'เทา', qty: 1, status: 'รับออเดอร์', at: new Date().toISOString() }];
   if (MOCK) {
     L = {
       init: function () { return Promise.resolve(); }, isLoggedIn: function () { return true; }, login: function () {},
@@ -310,11 +311,27 @@
             '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
             (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
-        (S.myTab === 'all' ? live.concat(dead) : mine).forEach(function (o, idx) {
+        // สินค้าเดียวกัน (คนละสี/ขนาด) ให้อยู่ติดกัน: เรียงกลุ่มสินค้าตามรายการล่าสุด แล้วในกลุ่มใหม่ไปเก่า
+        function cluster(list) {
+          var latest = {};
+          list.forEach(function (o) { var t = o.at || ''; if (!latest[o.productId] || t > latest[o.productId]) latest[o.productId] = t; });
+          return list.slice().sort(function (x, y) {
+            if (x.productId !== y.productId) return latest[x.productId] < latest[y.productId] ? 1 : latest[x.productId] > latest[y.productId] ? -1 : (x.productId < y.productId ? -1 : 1);
+            return (y.at || '') < (x.at || '') ? -1 : (y.at || '') > (x.at || '') ? 1 : 0;
+          });
+        }
+        var ordered = S.myTab === 'all' ? cluster(live).concat(cluster(dead)) : cluster(mine);
+        ordered.forEach(function (o, idx) {
+          var sameAsPrev = idx > 0 && ordered[idx - 1].productId === o.productId && (idx !== live.length || S.myTab !== 'all');
           if (S.myTab === 'all' && live.length && dead.length && idx === live.length) html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>';
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
-          html += '<div class="my-line' + (working ? ' saving' : '') + '"><div class="my-order' + (o.status === 'ยกเลิก' ? ' cancelled' : '') + '"><span class="line-name">' + esc(o.productName) + (o.option ? ' (' + esc(o.option) + ')' : '') + ' × ' + o.qty + (o.priceThb != null ? '<span class="line-price">' + baht(o.priceThb * 100) + ' × ' + o.qty + ' = <strong>' + baht(o.priceThb * o.qty * 100) + '</strong></span>' : '') + '</span>' + (o.status === 'รับออเดอร์' || S.myTab !== 'all' ? '' : '<span class="badge">' + esc(o.status) + '</span>') + '</div>';
+          var unit = o.priceThb != null ? o.priceThb : null;
+          var badgeTxt = (o.status === 'รับออเดอร์' || S.myTab !== 'all') ? '' : '<span class="badge">' + esc(o.status) + '</span>';
+          html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (sameAsPrev ? ' same-product' : '') + '">' +
+            '<div class="line-name">' + (sameAsPrev && o.option ? '' : esc(o.productName)) + (o.option ? ' <span class="opt-tag' + (sameAsPrev ? ' alone' : '') + '">' + esc(o.option) + '</span>' : '') + '</div>' +
+            '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
+            '<div class="line-unit">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +
@@ -333,6 +350,7 @@
       }
       var empty = '<p class="muted center empty">ไม่มีรายการในหัวข้อนี้</p>';
       html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
+      if (S.myTab === 'new') html += '<p class="small muted sec-note">รับออเดอร์แล้ว ร้านจะแจ้งยอดที่ต้องโอนทางแชท LINE เมื่อปิดพรี</p>';
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');

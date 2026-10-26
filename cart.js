@@ -44,7 +44,7 @@ function newestFirstCodes(lines) {
 
 // แท็บในหน้า "ออเดอร์ของฉัน" (จัดกลุ่มจากสถานะรายการในชีต; ที่ต้องชำระดูจากยอดที่ร้านแจ้งแล้วแต่ยังไม่จ่าย)
 var ORDER_TABS = [
-  { key: 'all', label: 'ทั้งหมด' }, { key: 'pay', label: 'ที่ต้องชำระ' }, { key: 'verify', label: 'รอตรวจสอบ' }, { key: 'new', label: 'รับออเดอร์' },
+  { key: 'all', label: 'ทั้งหมด' }, { key: 'pay', label: 'ที่ต้องชำระ' }, { key: 'verify', label: 'รอตรวจสอบ' }, { key: 'new', label: 'รอแจ้งยอด' },
   { key: 'ship', label: 'ที่ต้องจัดส่ง' }, { key: 'inbound', label: 'ที่ต้องได้รับ' }, { key: 'done', label: 'สำเร็จ' },
   { key: 'refund', label: 'คืนเงิน' }, { key: 'cancel', label: 'ยกเลิก' },
 ];

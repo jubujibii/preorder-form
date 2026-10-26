@@ -293,6 +293,11 @@
           });
           html += '</div>';
         }
+        if (b && b.refund && (S.myTab === 'refund' || S.myTab === 'all') && mine.some(function (o) { return o.status === 'คืนเงิน'; })) {
+          html += b.refund.paid
+            ? '<div class="slip-done">✓ ร้านคืนเงินให้แล้ว' + (b.refund.amountSatang != null ? ' ' + baht(b.refund.amountSatang) : '') + (b.refund.at ? '<small>' + esc(closeText(b.refund.at)) + '</small>' : '') + '</div>'
+            : '<p class="small muted pay-note">รายการนี้ร้านจะโอนเงินคืนให้ เมื่อโอนแล้วสถานะจะขึ้นที่นี่</p>';
+        }
         mine.forEach(function (o) {
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);

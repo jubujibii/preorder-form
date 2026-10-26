@@ -85,8 +85,17 @@ function filterMyOrders(lines, billing, tab) {
     var live = l.status !== 'ยกเลิก' && l.status !== 'คืนเงิน';
     var pay = live ? st[l.preorderCode] : undefined;
     if (tab === 'pay' || tab === 'verify') return pay === tab;
-    return !pay && orderTabOf(l.status) === tab;
+    return !pay && lineTab(l, billing) === tab;
   });
+}
+
+// แท็บของรายการ: ชำระรอบ 1 แล้วแต่ร้านยังไม่ได้กด "สั่งของแล้ว" (ยังเป็นรับออเดอร์) ไม่ควรอยู่ "รอแจ้งยอด" -> ไปที่ต้องจัดส่ง (หัวข้อ "ชำระแล้ว รอร้านสั่งของ")
+function lineTab(l, billing) {
+  if (l.status === 'รับออเดอร์') {
+    var b = billing.filter(function (x) { return x.preorderCode === l.preorderCode; })[0];
+    if (b && b.round1 && b.round1.paid) return 'ship';
+  }
+  return orderTabOf(l.status);
 }
 
 // ตัวเลขบนแท็บ = จำนวนออเดอร์ (พรี) ที่อยู่ในแท็บนั้น ไม่ใช่จำนวนชิ้น

@@ -258,7 +258,7 @@
       function tile(k, big) {
         return '<button type="button" role="tab" class="tile' + (big ? ' tile-pay' : '') + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' +
           '<span class="tile-ico">' + ICONS[k] + (counts[k] ? '<span class="tile-n">' + counts[k] + '</span>' : '') + '</span>' +
-          '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน ' + baht(dueSatang) + '</span>' : '') + '</span></button>';
+          '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน <b>' + baht(dueSatang) + '</b></span>' : '') + '</span></button>';
       }
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;

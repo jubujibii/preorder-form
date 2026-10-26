@@ -100,10 +100,8 @@ function tabCounts(lines, billing) {
   return out;
 }
 
-// ลิงก์เปิดแชท LINE OA ของร้านพร้อมข้อความที่พิมพ์ให้ล่วงหน้า (รูปแบบทางการของ LINE: /R/oaMessage/<OA id>/?<ข้อความ>)
-function adminChatUrl(oaBasicId, memberCode, orderNos) {
-  var nos = (orderNos || []).filter(Boolean);
-  var text = 'สอบถามออเดอร์' + (nos.length ? ' ' + nos.join(', ') : '') + (memberCode ? ' (' + memberCode + ')' : '');
-  return 'https://line.me/R/oaMessage/' + encodeURIComponent(oaBasicId) + '/?' + encodeURIComponent(text);
+// ลิงก์เปิดแชท LINE OA ของร้าน (เพื่อนของร้านจะเข้าแชท 1:1 ทันที ไม่มีข้อความพิมพ์ให้)
+function adminChatUrl(oaBasicId) {
+  return 'https://line.me/R/ti/p/' + encodeURIComponent(oaBasicId);
 }
 

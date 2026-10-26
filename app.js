@@ -122,11 +122,12 @@
   }
 
   function adminBtn() {
-    // ใช้ลิงก์ <a> ธรรมดา (LINE รับลิงก์ line.me/R/... จากการกดของผู้ใช้โดยตรง เหมือนปุ่มเพิ่มเพื่อน)
-    var billing = S.my && S.my.billing ? S.my.billing : [];
-    var unpaid = billing.filter(function (b) { return (b.round1 && !b.round1.paid) || (b.round2 && !b.round2.paid); });
-    var nos = (unpaid.length ? unpaid : billing).map(function (b) { return b.orderNo; }).slice(0, 3);
-    return '<a class="btn block admin-btn" href="' + esc(adminChatUrl(OA_ID, S.memberCode, nos)) + '">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></a>';
+    // ใช้ลิงก์ <a> ธรรมดา (LINE รับลิงก์ line.me/R/... จากการกดของผู้ใช้โดยตรง) เปิดแชทร้านโดยไม่มีข้อความให้
+    return '<a class="btn block admin-btn" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></a>';
+  }
+  var RECEIPT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4h14a2 2 0 0 1 2 2v21l-3-2-3 2-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2zM12 11h8M12 16h8M12 21h4"/></svg>';
+  function myOrdersBtn() {
+    return '<button type="button" class="btn block my-btn" data-act="my">' + RECEIPT_ICON + '<span>ดูออเดอร์ของฉัน</span></button>';
   }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
@@ -169,7 +170,7 @@
       if (S.products.length === 0) {
         return '<h1>ยังไม่มีพรีที่เปิดรับ</h1><p class="muted">เมื่อร้านเปิดพรีใหม่ รายการจะขึ้นที่หน้านี้</p>' +
           '<button class="btn block" data-act="refresh">รีเฟรชรายการ</button>' +
-          '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>';
+          myOrdersBtn();
       }
       var groups = [];
       S.products.forEach(function (p) {
@@ -203,7 +204,7 @@
         });
         html += '</ul></details>';
       });
-      html += '<button class="linkbtn" data-act="my">ดูออเดอร์ของฉัน</button>' +
+      html += myOrdersBtn() +
         '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
         '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
       return html;
@@ -219,7 +220,7 @@
         '<article class="ticket" aria-label="สรุปออเดอร์"><div class="small muted">รหัสสมาชิกของคุณ</div><div class="ticket-code">' + esc(S.memberCode) + '</div>' +
         '<dl>' + rows + '<div class="row total"><span>ค่าสินค้า</span><span>' + baht(r.totalSatang) + '</span></div></dl></article>' +
         '<button class="btn primary block" data-act="more">สั่งเพิ่ม</button>' +
-        '<button class="btn block" data-act="my">ดูออเดอร์ของฉัน</button>';
+        myOrdersBtn();
     },
 
     my: function () {

@@ -254,3 +254,7 @@ a.admin-btn { text-decoration: none; }
 
 .tab-dot.wait { background: #D99A00; }
 .sec-note { margin: -4px 0 8px; }
+
+.my-btn, .admin-btn { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; font-weight: 700; }
+.my-btn { background: var(--teal-dark); color: #fff; border-color: var(--teal-dark); margin-top: 14px; }
+.my-btn svg, .admin-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }

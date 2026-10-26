@@ -426,7 +426,9 @@
   }
 
   function showMy() {
-    S.my = null; S.myTab = ''; S.myMore = false; S.edit = null; S.confirmCancel = ''; setScreen('my');
+    S.my = null; S.myTab = ''; S.myMore = false;
+    if (linkTab && ORDER_TABS.some(function (t) { return t.key === linkTab; })) { S.myTab = linkTab; S.myMore = MORE_TAB_KEYS.indexOf(linkTab) >= 0; }
+    linkTab = ''; S.edit = null; S.confirmCancel = ''; setScreen('my');
     api('myOrders').then(function (res) {
       if (!res.ok) throw new Error();
       S.my = res; render();
@@ -520,6 +522,13 @@
     if (st && new URLSearchParams(st.replace(/^\?/, '')).get('page') === 'my') return true;
     return q.get('page') === 'my';
   }
+
+  // ?tab=refund ในลิงก์ข้อความ -> เปิดแท็บนั้นครั้งเดียว (ใช้ตอนเข้าจากลิงก์เท่านั้น)
+  var linkTab = (function () {
+    var q = new URLSearchParams(location.search);
+    var st = q.get('liff.state');
+    return q.get('tab') || (st ? new URLSearchParams(st.replace(/^\?/, '')).get('tab') : '') || '';
+  })();
 
   function gateAfterBootstrap(registered) {
     if (!S.friend) return setScreen('friend');

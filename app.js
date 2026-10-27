@@ -291,14 +291,11 @@
         var live = o.status !== 'ยกเลิก' && o.status !== 'คืนเงิน';
         return (live && payState[o.preorderCode]) || lineTab(o, d.billing);
       }
-      // ป้ายสถานะบนหัวการ์ด Lot (แท็บทั้งหมด): เรียง "ต้องทำ" ก่อน จบแล้วท้ายสุด แสดงไม่เกิน 3 ป้าย
+      // ป้ายสถานะบนหัวการ์ด Lot (แท็บทั้งหมด): เรียง "ต้องทำ" ก่อน จบแล้วท้ายสุด แสดงไม่แสดงจำนวน
       function stageTags(list) {
         var n = {};
-        list.forEach(function (o) { var k = stageOf(o); n[k] = (n[k] || 0) + o.qty; });
-        var keys = STAGE_ORDER.filter(function (k) { return n[k]; });
-        var out = keys.slice(0, 3).map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + ' ' + n[k] + '</span>'; });
-        if (keys.length > 3) out.push('<span class="stage s-more">+' + (keys.length - 3) + '</span>');
-        return '<span class="g-tags">' + out.join('') + '</span>';
+        list.forEach(function (o) { n[stageOf(o)] = true; });
+        return '<span class="g-tags">' + STAGE_ORDER.filter(function (k) { return n[k]; }).map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + '</span>'; }).join('') + '</span>';
       }
       function renderGroups(list) {
         var html = '';

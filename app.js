@@ -129,6 +129,7 @@
     if (S.screen !== 'order' && S.sheet) closeSheet();
     var fn = SCREENS[S.screen] || SCREENS.error;
     app.innerHTML = fn();
+    if (S.screen === 'order' || S.screen === 'my') app.insertAdjacentHTML('beforeend', tabbarHtml(S.screen));
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
     if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }
@@ -178,6 +179,15 @@
     if (!(h > 0) || h > 48) return '';
     var hot = h < 24;
     return '<span class="g-badge' + (hot ? ' hot' : '') + '">' + CLOCK_ICON + (hot ? Math.max(1, Math.ceil(h)) + ' ชม.' : Math.floor(h / 24) + ' วัน') + '</span>';
+  }
+  // แถบเมนูล่าง ใช้ร่วมกันที่หน้าสั่งสินค้ากับหน้าออเดอร์ของฉัน (แท็บที่ตรงกับหน้านั้นไฮไลต์ แตะแล้วเลื่อนขึ้นบน)
+  function tabbarHtml(active) {
+    function tab(key, icon, label, act) {
+      var on = key === active;
+      return '<button type="button" class="tb' + (on ? ' on' : '') + '" data-act="' + (on ? 'top' : act) + '"' + (on ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span></button>';
+    }
+    return '<nav class="tabbar" aria-label="เมนูหลัก">' + tab('order', BAG_ICON, 'สั่งสินค้า', 'more') + tab('my', RECEIPT_ICON, 'ออเดอร์ของฉัน', 'my') +
+      '<a class="tb" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อร้าน</span></a></nav>';
   }
   function variantRow(p, o, oi, hasOptImg) {
     var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
@@ -315,10 +325,7 @@
       });
       html +=
         '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
-        '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>' +
-        '<nav class="tabbar" aria-label="เมนูหลัก"><button type="button" class="tb on" data-act="top" aria-current="page">' + BAG_ICON + '<span>สั่งสินค้า</span></button>' +
-        '<button type="button" class="tb" data-act="my">' + RECEIPT_ICON + '<span>ออเดอร์ของฉัน</span></button>' +
-        '<a class="tb" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อร้าน</span></a></nav>';
+        '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
       return html;
     },
 

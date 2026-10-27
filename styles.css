@@ -532,17 +532,39 @@ body[data-screen="my"] .member { margin-left: 0; }
 .catbar .chip { white-space: nowrap; flex: none; }
 
 /* ---- การ์ด Lot: ป้ายสถานะ + จัดระยะ (แท็บทั้งหมด) ---- */
-.group > summary { padding: 14px 0; align-items: center; row-gap: 4px; }
-.group > summary::after { content: ''; width: 9px; height: 9px; margin: 0 4px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
-.group[open] > summary::after { transform: rotate(-135deg); }
-.g-tags { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
-.stage { display: inline-block; white-space: nowrap; font-size: 12.5px; font-weight: 600; line-height: 1.5; padding: 1px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
-.stage.s-pay { background: var(--warn-bg-strong); color: var(--warn-ink); }
-.stage.s-verify, .stage.s-new { background: var(--warn-bg); color: var(--warn-ink); }
-.stage.s-ship, .stage.s-inbound { background: var(--accent-soft); color: var(--accent-dark); }
-.stage.s-done { background: var(--ok-bg); color: var(--ok); }
-.stage.s-refund { background: var(--ok); color: var(--on-accent); }
-.stage.s-cancel, .stage.s-more { background: var(--line); color: var(--muted); font-weight: 500; }
+.group { margin: 14px 0; padding: 0 16px; }
+.group > summary { padding: 16px 0; row-gap: 2px; align-items: start; }
+.group > summary::before { align-self: start; grid-row: 1 / span 3; margin-top: 4px; }
+.group > summary .g-title { font-size: 18px; line-height: 1.35; }
+.group > summary .g-meta { font-size: 14px; }
+.group > summary::after { content: ''; align-self: start; justify-self: end; grid-row: 1; width: 8px; height: 8px; margin: 10px 6px 0 0; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.group[open] > summary::after { transform: rotate(-135deg); margin-top: 14px; }
+.g-tags { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.stage { display: inline-block; white-space: nowrap; font-size: 12.5px; font-weight: 600; line-height: 1.5; padding: 1px 10px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.stage.s-pay { background: #FDE0DA; color: #A5281C; }
+.stage.s-verify { background: #FFE9B8; color: #6B4300; }
+.stage.s-new { background: #EBE4FA; color: #54379B; }
+.stage.s-ship { background: #DDEBFB; color: #1D5BA3; }
+.stage.s-inbound { background: #D6F0EC; color: #0C6B62; }
+.stage.s-done { background: #D9F0DB; color: #226B3F; }
+.stage.s-refund { background: #FBE0EC; color: #9C2B5A; }
+.stage.s-cancel { background: #ECE7E1; color: #8C7A6D; font-weight: 500; }
 .badge.stage { font-size: 12.5px; }
-.group + .btn.block, .btn.block { min-height: 52px; }
+.btn.block { min-height: 52px; }
 .btn.block[data-act="more"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---- หัวเว็บค้างบนจอ + ปุ่มย้อนกลับกดง่าย ---- */
+.top { position: sticky; top: 0; z-index: 30; }
+body[data-screen="my"] .top-back { width: 44px; height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 1; }
+.group[open] > summary::after { transform: rotate(225deg); margin-top: 16px; }
+
+/* ---- หัวข้อย่อย (รอแจ้งยอด/ที่ต้องจัดส่ง) ---- */
+.tab-title { margin: 24px 0 6px; }
+.sec-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 12px; background: var(--accent-tint); font-size: 13.5px; line-height: 1.55; }
+
+/* ---- รูปตามตัวเลือก ---- */
+.variant-name { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.variant.with-img { min-height: 60px; }
+.opt-img { width: 48px; height: 48px; border-radius: 12px; flex: none; }
+.line-name .opt-img { width: 40px; height: 40px; margin-right: 8px; vertical-align: middle; }
+.opt-img-blank { display: inline-block; border-radius: 12px; background: var(--accent-tint); border: 1.5px dashed var(--accent-line); }

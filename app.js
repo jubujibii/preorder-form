@@ -73,6 +73,7 @@
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
       { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
+    if (params.get('desc') && products[0]) products[0].description = 'ผ้านุ่มหนา ซักเครื่องได้\nขนาด 60 × 45 ซม. เหมาะกับแมวน้ำหนักไม่เกิน 6 กก.\nสีอาจต่างจากภาพเล็กน้อย';
     if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
     var res;
     products.forEach(function (x) { x.category = /นอน/.test(x.name) ? 'ที่นอน' : /ของเล่น/.test(x.name) ? 'ของเล่น' : 'อาหาร'; });
@@ -226,7 +227,7 @@
         g.items.forEach(function (p) {
           if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
           var opts = p.options.length ? p.options : [''];
-          html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div><div class="variants">';
+          html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div>' + (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') + '<div class="variants">';
           var hasOptImg = (p.optionImages || []).some(Boolean);
           opts.forEach(function (o, oi) {
             var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';

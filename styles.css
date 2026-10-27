@@ -568,3 +568,11 @@ body[data-screen="my"] .top-back { width: 44px; height: 44px; touch-action: mani
 .opt-img { width: 48px; height: 48px; border-radius: 12px; flex: none; }
 .line-name .opt-img { width: 40px; height: 40px; margin-right: 8px; vertical-align: middle; }
 .opt-img-blank { display: inline-block; border-radius: 12px; background: var(--accent-tint); border: 1.5px dashed var(--accent-line); }
+
+/* ---- รายละเอียดสินค้า (หน้าสั่งของ) ---- */
+.pdesc { margin: 8px 0 2px; }
+.pdesc > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--accent-dark); padding: 4px 0; }
+.pdesc > summary::-webkit-details-marker { display: none; }
+.pdesc > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-top: -3px; transition: transform .15s; }
+.pdesc[open] > summary::after { transform: rotate(225deg); margin-top: 3px; }
+.pdesc > p { margin: 4px 0 6px; padding: 10px 12px; border-radius: 12px; background: var(--accent-tint); color: var(--ink); font-size: 14px; line-height: 1.6; white-space: pre-line; }

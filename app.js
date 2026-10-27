@@ -11,7 +11,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, openMy: {}, myTab: '', myMore: false, pending: { count: 0, totalSatang: 0 }, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, open: {}, cat: {}, openMy: {}, myTab: '', myMore: false, pending: { count: 0, totalSatang: 0 }, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -74,6 +74,7 @@
       { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     var res;
+    products.forEach(function (x) { x.category = /นอน/.test(x.name) ? 'ที่นอน' : /ของเล่น/.test(x.name) ? 'ของเล่น' : 'อาหาร'; });
     if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products, pendingPay: params.get('pay') === '1' ? { count: 2, totalSatang: 83000 } : { count: 0, totalSatang: 0 } };
     else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
     else if (p.action === 'placeOrder') {
@@ -148,6 +149,20 @@
   }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
+  // แถบกรองหมวดในแต่ละ Lot: แสดงเมื่อ Lot นั้นมีมากกว่า 1 หมวด (สินค้าที่ไม่ระบุหมวดนับเป็น "อื่น ๆ")
+  function lotCategories(g) {
+    var seen = [];
+    g.items.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); });
+    return seen;
+  }
+  function catBar(g) {
+    var cats = lotCategories(g);
+    if (cats.length < 2) return '';
+    var cur = S.cat[g.code] || '';
+    var chip = function (val, label) { return '<button type="button" class="chip' + (cur === val ? ' active' : '') + '" data-act="cat" data-code="' + esc(g.code) + '" data-cat="' + esc(val) + '">' + esc(label) + '</button>'; };
+    return '<div class="catbar" role="group" aria-label="กรองหมวดสินค้า">' + chip('', 'ทั้งหมด') + cats.map(function (c) { return chip(c, c); }).join('') + '</div>';
+  }
+
   var SCREENS = {
     loading: function () { return '<p class="center muted">กำลังโหลด…</p>'; },
 
@@ -205,8 +220,9 @@
       });
       groups.forEach(function (g) {
         html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + '</span>' +
-          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><ul class="items">';
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + catBar(g) + '<ul class="items">';
         g.items.forEach(function (p) {
+          if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
           var opts = p.options.length ? p.options : [''];
           html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div><div class="variants">';
           opts.forEach(function (o) {
@@ -623,6 +639,7 @@
     else if (act === 'refresh') refreshProducts();
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
+    else if (act === 'cat') { S.cat[t.getAttribute('data-code')] = t.getAttribute('data-cat') || ''; keepScroll(); }
     else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); if (MORE_TAB_KEYS.indexOf(S.myTab) >= 0) S.myMore = true; S.edit = null; S.confirmCancel = ''; render(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }

@@ -525,3 +525,8 @@ body[data-screen="my"] .member { margin-left: 0; }
 .billbox.all-paid .pay-amt { color: #4F7F3C; }
 .refundbox.done { background: #DCEFD0; border-color: #B9DAA6; }
 .opt-tag { white-space: nowrap; flex: none; }
+
+/* แถบกรองหมวดสินค้าในแต่ละ Lot */
+.catbar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; margin: 0 -2px; scrollbar-width: none; }
+.catbar::-webkit-scrollbar { display: none; }
+.catbar .chip { white-space: nowrap; flex: none; }

@@ -509,3 +509,19 @@ body[data-screen="my"] .member { margin-left: 0; }
 .tile-pay .tile-sub b, .tile-pay .tile-sub strong { color: #D8381E; font-size: 22px; font-weight: 800; }
 .tile-pay .tile-ico svg { width: 40px; height: 40px; }
 .mybuy .tile-pay, .mybuy .tile-pay.active, .mybuy .tile.tile-pay.active { background: linear-gradient(110deg, #FFF3C9, #FFE9A6); border: 2px solid #F2BE45; }
+
+/* รูปสินค้าในหน้าออเดอร์ของฉัน */
+.my-pimg { width: 56px; height: 56px; border-radius: 14px; }
+.my-line .line-name.with-img { display: flex; align-items: center; gap: 12px; }
+.prod-head { display: flex; align-items: center; gap: 12px; }
+.my-line.is-cancelled .my-pimg { opacity: .5; filter: grayscale(1); }
+.my-line .line-name.with-img { flex-direction: row; }
+.my-line .line-name.with-img .ln-txt { min-width: 0; }
+.prod-head { text-align: left; }
+.prod-head .my-pimg { flex: none; }
+
+/* กล่องยอดโอนที่จ่ายครบแล้ว = เขียวอ่อน; กล่องคืนเงินที่โอนแล้ว = เขียวเข้มกว่า เพื่อแยกกัน */
+.billbox.all-paid { background: #F1F8EC; border-color: #D3E6C7; }
+.billbox.all-paid .pay-amt { color: #4F7F3C; }
+.refundbox.done { background: #DCEFD0; border-color: #B9DAA6; }
+.opt-tag { white-space: nowrap; flex: none; }

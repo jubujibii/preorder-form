@@ -19,7 +19,7 @@ function mergeOrderLines(rows) {
   var index = {};
   rows.forEach(function (r) {
     var k = JSON.stringify([r.preorderCode, r.productId, r.productName, r.option, r.status]);
-    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
+    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, imageUrl: r.imageUrl || '', canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
     out[index[k]].qty += r.qty;
     if (r.at && (!out[index[k]].at || r.at > out[index[k]].at)) out[index[k]].at = r.at;
   });
@@ -94,6 +94,11 @@ function lineTab(l, billing) {
   if (l.status === 'รับออเดอร์') {
     var b = billing.filter(function (x) { return x.preorderCode === l.preorderCode; })[0];
     if (b && b.round1 && b.round1.paid) return 'ship';
+  }
+  // ของถึงไทยแล้ว รอบ 1 จ่ายแล้ว แต่ร้านยังไม่แจ้งยอดรอบ 2: ยังรอแจ้งยอด (รอบ 2)
+  if (l.status === 'ถึงไทย') {
+    var b2 = billing.filter(function (x) { return x.preorderCode === l.preorderCode; })[0];
+    if (b2 && b2.round1 && b2.round1.paid && !b2.round2) return 'new';
   }
   return orderTabOf(l.status);
 }

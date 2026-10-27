@@ -80,7 +80,7 @@
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
-      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
+      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
       if (params.get('refund')) {
         res.billing[0].round1 = { totalSatang: 54000, paid: true, slipAt: null };
@@ -89,6 +89,7 @@
           { preorderCode: '090426', productId: 'x3', productName: 'ที่นอนแมวทรงโดนัท', option: 'ชมพู', qty: 3, status: 'ยกเลิก', priceThb: 66, at: '2026-10-25T01:00:00Z', canCancel: false });
         res.billing[0].refund = params.get('refund') === 'paid' ? { paid: true, amountSatang: 18700, at: '2026-10-26T03:00:00Z' } : { paid: false, amountSatang: 18700, at: null };
       }
+      res.orders.forEach(function (o) { if (!o.imageUrl && String(o.productName).indexOf('นอน') >= 0 && products[0]) o.imageUrl = products[0].imageUrl; });
     } else if (p.action === 'uploadSlip') {
       if (params.get('slipfail') === '1') res = { ok: false, error: 'server_error', message: 'x' };
       else { mockDb.slip[p.round] = new Date().toISOString(); res = { ok: true, slipAt: mockDb.slip[p.round] }; }
@@ -280,7 +281,7 @@
         html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
-          html += '<div class="billbox"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
+          html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
           [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
             if (!r) return;
@@ -312,6 +313,7 @@
             '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
             (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
+        function thumb(o) { return o.imageUrl ? '<img class="pimg my-pimg" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
         // สินค้าเดียวกัน (คนละสี/ขนาด) ให้อยู่ติดกัน: เรียงกลุ่มสินค้าตามรายการล่าสุด แล้วในกลุ่มใหม่ไปเก่า
         function cluster(list) {
           var latest = {};
@@ -325,14 +327,14 @@
         ordered.forEach(function (o, idx) {
           var sameAsPrev = idx > 0 && ordered[idx - 1].productId === o.productId && (idx !== live.length || S.myTab !== 'all');
           var multi = ordered.filter(function (x) { return x.productId === o.productId && (x.status === 'ยกเลิก') === (o.status === 'ยกเลิก'); }).length > 1 && !!o.option;
-          if (multi && !sameAsPrev) html += '<div class="prod-head">' + esc(o.productName) + '</div>';
+          if (multi && !sameAsPrev) html += '<div class="prod-head">' + thumb(o) + '<span>' + esc(o.productName) + '</span></div>';
           if (S.myTab === 'all' && live.length && dead.length && idx === live.length) html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>';
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           var unit = o.priceThb != null ? o.priceThb : null;
           var badgeTxt = (o.status === 'รับออเดอร์' || S.myTab !== 'all') ? '' : '<span class="badge">' + esc(o.status) + '</span>';
           html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
-            '<div class="line-name">' + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
+            '<div class="line-name' + (!multi && o.imageUrl ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
             '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
@@ -354,12 +356,18 @@
       var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง/จัดส่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์ กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
       var empty = '<p class="muted center empty">' + esc(emptyMsg[S.myTab] || 'ไม่มีรายการในหัวข้อนี้') + '</p>';
       html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
-      if (S.myTab === 'new') html += '<p class="small muted sec-note">รับออเดอร์แล้ว ร้านจะแจ้งยอดที่ต้องโอนทางแชท LINE เมื่อปิดพรี</p>';
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');
         html += shown.length ? renderGroups(shown) : (waiting.length ? '<p class="muted center empty">ไม่มียอดที่ต้องชำระ</p>' : empty);
         if (waiting.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>รอตรวจสอบ</h2><p class="small muted sec-note">แนบสลิปแล้ว รอร้านตรวจสอบยอด</p>' + renderGroups(waiting);
+      } else if (S.myTab === 'new' && shown.length) {
+        // รอแจ้งยอด แยกเป็นรอบ 1 (สั่งแล้ว รอร้านแจ้งยอดสินค้า+ส่งจีน) และรอบ 2 (ของถึงไทยแล้ว รอร้านแจ้งค่านำเข้า+ส่งไทย)
+        [['round1', 'รอแจ้งยอดรอบ 1', 'รับออเดอร์แล้ว ร้านจะแจ้งยอดค่าสินค้า + ส่งจีนทางแชท LINE เมื่อปิดพรี', function (o) { return o.status !== 'ถึงไทย'; }],
+         ['round2', 'รอแจ้งยอดรอบ 2', 'ของถึงไทยแล้ว ร้านจะแจ้งยอดค่านำเข้า + ส่งในไทยทางแชท LINE', function (o) { return o.status === 'ถึงไทย'; }]].forEach(function (g) {
+          var part = shown.filter(g[3]);
+          if (part.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>' + g[1] + '</h2><p class="small muted sec-note">' + g[2] + '</p>' + renderGroups(part);
+        });
       } else if (S.myTab === 'ship' && shown.length) {
         // ที่ต้องจัดส่ง แยกหัวข้อตามสถานะ เรียงใกล้ถึงมือลูกค้าที่สุดก่อน: แพ็กแล้ว > ถึงไทย > ออกจากจีน > สั่งของแล้ว
         [['แพ็กแล้ว', 'แพ็กแล้ว รอจัดส่ง', 'ร้านแพ็กของแล้ว กำลังจะส่งถึงคุณ', 'ok'], ['ถึงไทย', 'ถึงไทยแล้ว', 'ของถึงไทยแล้ว รอร้านแพ็กและส่ง', 'ok'], ['ออกจากจีน', 'ออกจากจีนแล้ว', 'ของออกจากจีน กำลังเดินทางมาไทย', 'wait'], ['สั่งของแล้ว', 'สั่งของแล้ว', 'ร้านสั่งของจากจีนแล้ว รอของออกจากจีน', 'wait'], ['รับออเดอร์', 'ชำระแล้ว รอร้านสั่งของ', 'ร้านได้รับยอดแล้ว และจะสั่งของจากจีนให้เมื่อรวมออเดอร์ครบ', 'wait']].forEach(function (g) {

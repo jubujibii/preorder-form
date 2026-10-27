@@ -285,6 +285,21 @@
           return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (k === 'refund' && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
+      var STAGE_ORDER = ['pay', 'verify', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'];
+      var payState = paymentStateByPreorder(d.billing);
+      function stageOf(o) {
+        var live = o.status !== 'ยกเลิก' && o.status !== 'คืนเงิน';
+        return (live && payState[o.preorderCode]) || lineTab(o, d.billing);
+      }
+      // ป้ายสถานะบนหัวการ์ด Lot (แท็บทั้งหมด): เรียง "ต้องทำ" ก่อน จบแล้วท้ายสุด แสดงไม่เกิน 3 ป้าย
+      function stageTags(list) {
+        var n = {};
+        list.forEach(function (o) { var k = stageOf(o); n[k] = (n[k] || 0) + o.qty; });
+        var keys = STAGE_ORDER.filter(function (k) { return n[k]; });
+        var out = keys.slice(0, 3).map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + ' ' + n[k] + '</span>'; });
+        if (keys.length > 3) out.push('<span class="stage s-more">+' + (keys.length - 3) + '</span>');
+        return '<span class="g-tags">' + out.join('') + '</span>';
+      }
       function renderGroups(list) {
         var html = '';
         var codes = newestFirstCodes(list);
@@ -294,7 +309,7 @@
         var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
         var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span></summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span>' + (S.myTab === 'all' ? stageTags(mine) : '') + '</summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -348,7 +363,7 @@
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           var unit = o.priceThb != null ? o.priceThb : null;
-          var badgeTxt = (o.status === 'รับออเดอร์' || S.myTab !== 'all') ? '' : '<span class="badge">' + esc(o.status) + '</span>';
+          var badgeTxt = S.myTab !== 'all' ? '' : '<span class="badge stage s-' + stageOf(o) + '">' + esc(o.status === 'รับออเดอร์' ? labelOf[stageOf(o)] : o.status) + '</span>';
           html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
             '<div class="line-name' + (!multi && o.imageUrl ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +

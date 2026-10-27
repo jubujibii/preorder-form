@@ -530,3 +530,19 @@ body[data-screen="my"] .member { margin-left: 0; }
 .catbar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; margin: 0 -2px; scrollbar-width: none; }
 .catbar::-webkit-scrollbar { display: none; }
 .catbar .chip { white-space: nowrap; flex: none; }
+
+/* ---- การ์ด Lot: ป้ายสถานะ + จัดระยะ (แท็บทั้งหมด) ---- */
+.group > summary { padding: 14px 0; align-items: center; row-gap: 4px; }
+.group > summary::after { content: ''; width: 9px; height: 9px; margin: 0 4px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.group[open] > summary::after { transform: rotate(-135deg); }
+.g-tags { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.stage { display: inline-block; white-space: nowrap; font-size: 12.5px; font-weight: 600; line-height: 1.5; padding: 1px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
+.stage.s-pay { background: var(--warn-bg-strong); color: var(--warn-ink); }
+.stage.s-verify, .stage.s-new { background: var(--warn-bg); color: var(--warn-ink); }
+.stage.s-ship, .stage.s-inbound { background: var(--accent-soft); color: var(--accent-dark); }
+.stage.s-done { background: var(--ok-bg); color: var(--ok); }
+.stage.s-refund { background: var(--ok); color: var(--on-accent); }
+.stage.s-cancel, .stage.s-more { background: var(--line); color: var(--muted); font-weight: 500; }
+.badge.stage { font-size: 12.5px; }
+.group + .btn.block, .btn.block { min-height: 52px; }
+.btn.block[data-act="more"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }

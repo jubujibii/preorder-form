@@ -73,6 +73,7 @@
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
       { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
+    if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
     var res;
     products.forEach(function (x) { x.category = /นอน/.test(x.name) ? 'ที่นอน' : /ของเล่น/.test(x.name) ? 'ของเล่น' : 'อาหาร'; });
     if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products, pendingPay: params.get('pay') === '1' ? { count: 2, totalSatang: 83000 } : { count: 0, totalSatang: 0 } };
@@ -83,6 +84,7 @@
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
+      if (params.get('nobill')) res.billing = [];
       if (params.get('refund')) {
         res.billing[0].round1 = { totalSatang: 54000, paid: true, slipAt: null };
         res.orders.push({ preorderCode: '090426', productId: 'x1', productName: 'ที่นอนแมวทรงโดนัท', option: 'ฟ้า', qty: 2, status: 'คืนเงิน', priceThb: 66, at: '2026-10-25T01:00:00Z', canCancel: false },
@@ -225,9 +227,10 @@
           if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
           var opts = p.options.length ? p.options : [''];
           html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div><div class="variants">';
-          opts.forEach(function (o) {
-            var k = qtyKey(p.productId, o), q = S.qty[k] || 0;
-            html += '<div class="variant' + (q ? ' has' : '') + '" data-k="' + esc(k) + '"><span>' + (o ? esc(o) : 'จำนวน') + '</span>' +
+          var hasOptImg = (p.optionImages || []).some(Boolean);
+          opts.forEach(function (o, oi) {
+            var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
+            html += '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + '</span>' +
               '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
               '<output aria-live="off">' + q + '</output>' +
               '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
@@ -341,7 +344,7 @@
             '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
             (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
-        function thumb(o) { return o.imageUrl ? '<img class="pimg my-pimg" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
+        function thumb(o) { var u = o.optionImageUrl || o.imageUrl; return u ? '<img class="pimg my-pimg" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
         // สินค้าเดียวกัน (คนละสี/ขนาด) ให้อยู่ติดกัน: เรียงกลุ่มสินค้าตามรายการล่าสุด แล้วในกลุ่มใหม่ไปเก่า
         function cluster(list) {
           var latest = {};
@@ -362,7 +365,7 @@
           var unit = o.priceThb != null ? o.priceThb : null;
           var badgeTxt = S.myTab !== 'all' ? '' : '<span class="badge stage s-' + stageOf(o) + '">' + esc(o.status === 'รับออเดอร์' ? labelOf[stageOf(o)] : o.status) + '</span>';
           html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
-            '<div class="line-name' + (!multi && o.imageUrl ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
+            '<div class="line-name' + (!multi && (o.optionImageUrl || o.imageUrl) ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? (o.optionImageUrl ? '<img class="pimg opt-img" src="' + esc(o.optionImageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
             '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
@@ -383,7 +386,8 @@
       }
       var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง/จัดส่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์ กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
       var empty = '<p class="muted center empty">' + esc(emptyMsg[S.myTab] || 'ไม่มีรายการในหัวข้อนี้') + '</p>';
-      html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
+      // แท็บที่แบ่งหัวข้อย่อยเอง (รอแจ้งยอด/ที่ต้องจัดส่ง) ไม่ต้องมีหัวข้อซ้อนกันสองชั้น
+      if (!((S.myTab === 'new' || S.myTab === 'ship') && shown.length)) html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');
@@ -638,7 +642,7 @@
   }, true);
 
   var topBack = document.querySelector('[data-top-back]');
-  if (topBack) topBack.addEventListener('click', function () { loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); }); });
+  if (topBack) topBack.addEventListener('click', function () { setScreen('order'); refreshTotal(); loadBootstrap().then(function () { if (S.screen === 'order') { render(); refreshTotal(); } }).catch(function () {}); });
 
   app.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');

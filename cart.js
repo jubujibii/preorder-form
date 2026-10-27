@@ -19,7 +19,7 @@ function mergeOrderLines(rows) {
   var index = {};
   rows.forEach(function (r) {
     var k = JSON.stringify([r.preorderCode, r.productId, r.productName, r.option, r.status]);
-    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, imageUrl: r.imageUrl || '', canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
+    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, imageUrl: r.imageUrl || '', optionImageUrl: r.optionImageUrl || '', canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
     out[index[k]].qty += r.qty;
     if (r.at && (!out[index[k]].at || r.at > out[index[k]].at)) out[index[k]].at = r.at;
   });

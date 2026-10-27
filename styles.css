@@ -552,3 +552,19 @@ body[data-screen="my"] .member { margin-left: 0; }
 .badge.stage { font-size: 12.5px; }
 .btn.block { min-height: 52px; }
 .btn.block[data-act="more"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---- หัวเว็บค้างบนจอ + ปุ่มย้อนกลับกดง่าย ---- */
+.top { position: sticky; top: 0; z-index: 30; }
+body[data-screen="my"] .top-back { width: 44px; height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 1; }
+.group[open] > summary::after { transform: rotate(225deg); margin-top: 16px; }
+
+/* ---- หัวข้อย่อย (รอแจ้งยอด/ที่ต้องจัดส่ง) ---- */
+.tab-title { margin: 24px 0 6px; }
+.sec-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 12px; background: var(--accent-tint); font-size: 13.5px; line-height: 1.55; }
+
+/* ---- รูปตามตัวเลือก ---- */
+.variant-name { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.variant.with-img { min-height: 60px; }
+.opt-img { width: 48px; height: 48px; border-radius: 12px; flex: none; }
+.line-name .opt-img { width: 40px; height: 40px; margin-right: 8px; vertical-align: middle; }
+.opt-img-blank { display: inline-block; border-radius: 12px; background: var(--accent-tint); border: 1.5px dashed var(--accent-line); }

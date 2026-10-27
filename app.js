@@ -3,8 +3,9 @@
   var CFG = window.APP_CONFIG || {};
   var params = new URLSearchParams(location.search);
   var MOCK = params.get('mock') === '1';
-  var OA_URL = 'https://line.me/R/ti/p/@841hdioo';
+  var OA_URL = 'https://lin.ee/XYolAcG';
   var OA_ID = '@841hdioo';
+  var OA_QR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" role="img" aria-label="QR code เพิ่มเพื่อน PRE2PET"><path fill="#fff" d="M0 0h33v33h-33z"/><path class="qrline" stroke="#000" d="M2 2.5h7m1 0h1m3 0h4m2 0h1m1 0h1m1 0h7m-29 1h1m5 0h1m2 0h2m4 0h1m1 0h2m3 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m2 0h2m3 0h1m1 0h2m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m8 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h1m5 0h4m3 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m1 0h2m2 0h3m3 0h1m1 0h1m1 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-19 1h1m1 0h2m4 0h3m-21 1h1m1 0h1m3 0h2m1 0h2m2 0h1m1 0h2m1 0h1m1 0h1m2 0h1m2 0h1m1 0h1m-27 1h3m4 0h2m1 0h1m5 0h2m2 0h1m4 0h2m-29 1h3m1 0h6m3 0h3m1 0h1m1 0h1m4 0h3m1 0h1m-29 1h2m2 0h1m2 0h1m1 0h4m1 0h3m5 0h2m1 0h1m-21 1h5m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m1 0h2m4 0h1m-29 1h1m1 0h1m6 0h8m1 0h3m1 0h2m3 0h2m-28 1h2m2 0h2m4 0h1m3 0h1m1 0h4m2 0h1m4 0h1m-29 1h3m1 0h2m2 0h1m1 0h2m1 0h1m1 0h2m3 0h2m1 0h2m-24 1h1m1 0h1m2 0h1m2 0h2m2 0h1m2 0h1m1 0h2m2 0h2m4 0h1m-28 1h2m4 0h4m1 0h1m2 0h6m1 0h2m2 0h3m-29 1h3m2 0h2m5 0h4m1 0h3m2 0h1m1 0h2m2 0h1m-26 1h3m4 0h2m2 0h1m4 0h3m2 0h1m-25 1h2m1 0h2m1 0h1m2 0h2m1 0h3m1 0h1m1 0h1m1 0h6m1 0h1m-20 1h9m1 0h1m1 0h1m3 0h3m1 0h1m-29 1h7m1 0h1m1 0h1m4 0h3m2 0h1m1 0h1m1 0h1m3 0h1m-29 1h1m5 0h1m2 0h2m1 0h2m2 0h1m3 0h1m3 0h1m3 0h1m-29 1h1m1 0h3m1 0h1m2 0h2m1 0h2m1 0h2m1 0h8m1 0h2m-29 1h1m1 0h3m1 0h1m2 0h1m1 0h3m1 0h2m1 0h1m1 0h1m3 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h7m2 0h1m2 0h2m-29 1h1m5 0h1m2 0h1m2 0h1m1 0h1m3 0h2m1 0h2m2 0h1m-26 1h7m1 0h2m6 0h1m3 0h1m4 0h1m2 0h1"/></svg>';
   var MAX_QTY = 99;
   var app = document.getElementById('app');
   var memberEl = document.getElementById('member');
@@ -178,6 +179,7 @@
     friend: function () {
       return '<h1>เพิ่มเพื่อนร้านก่อนสั่ง</h1>' +
         '<p>ร้านต้องแจ้งยอดและเลขออเดอร์ทางแชท LINE ของร้าน ลูกค้าที่ยังไม่ได้เพิ่มเพื่อนจะไม่ได้รับข้อความ</p>' +
+        '<div class="qr-box">' + OA_QR + '<p>สแกน QR ด้วยแอป LINE หรือค้นหา ID <b>' + OA_ID + '</b> แล้วกดเพิ่มเพื่อน</p></div>' +
         '<a class="btn primary block" href="' + OA_URL + '">เพิ่มเพื่อน PRE2PET</a>' +
         '<button class="btn block" data-act="recheck">เพิ่มเพื่อนแล้ว ตรวจอีกครั้ง</button>';
     },
@@ -668,7 +670,7 @@
     else if (act === 'cancel-yes') cancelLine(t.getAttribute('data-k'));
     else if (act === 'my') showMy();
     else if (act === 'reload') location.reload();
-    else if (act === 'recheck') recheckFriend().then(function () { gateAfterBootstrap(!!S.memberCode); });
+    else if (act === 'recheck') location.reload();
   });
   app.addEventListener('submit', function (ev) {
     if (ev.target.id === 'regform') { ev.preventDefault(); submitRegister(ev.target); }

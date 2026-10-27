@@ -576,3 +576,9 @@ body[data-screen="my"] .top-back { width: 44px; height: 44px; touch-action: mani
 .pdesc > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-top: -3px; transition: transform .15s; }
 .pdesc[open] > summary::after { transform: rotate(225deg); margin-top: 3px; }
 .pdesc > p { margin: 4px 0 6px; padding: 10px 12px; border-radius: 12px; background: var(--accent-tint); color: var(--ink); font-size: 14px; line-height: 1.6; white-space: pre-line; }
+
+.qr-box { margin: 16px 0; text-align: center; }
+.qr-box svg { width: 180px; height: 180px; background: #fff; border-radius: 8px; }
+.qr-box p { margin: 8px 0 0; font-size: 14px; color: var(--muted, inherit); }
+.btn.block[data-act="recheck"] { margin-top: 10px; }
+.qr-box + .btn.block { margin-top: 12px; }

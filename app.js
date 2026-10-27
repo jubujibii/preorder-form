@@ -12,7 +12,7 @@
 
   var S = {
     screen: 'loading', products: [], memberCode: '', qty: {}, friend: true, friendUnknown: false, lineName: '',
-    busy: false, open: {}, cat: {}, openMy: {}, myTab: '', myMore: false, pending: { count: 0, totalSatang: 0 }, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
+    busy: false, sheet: '', open: {}, cat: {}, openMy: {}, myTab: '', myMore: false, pending: { count: 0, totalSatang: 0 }, payDetail: {}, slipBusy: '', slipErr: {}, confirmCancel: '', edit: null, refreshing: false, notice: '', error: '', fieldErrors: {}, form: { recipientName: '', phone: '', address: '', oldCode: '' },
     requestId: null, requestKey: '', receipt: null, my: null,
   };
 
@@ -126,6 +126,7 @@
     document.body.setAttribute('data-screen', S.screen);
     memberEl.hidden = !S.memberCode;
     memberEl.textContent = S.memberCode;
+    if (S.screen !== 'order' && S.sheet) closeSheet();
     var fn = SCREENS[S.screen] || SCREENS.error;
     app.innerHTML = fn();
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
@@ -165,6 +166,86 @@
     var cur = S.cat[g.code] || '';
     var chip = function (val, label) { return '<button type="button" class="chip' + (cur === val ? ' active' : '') + '" data-act="cat" data-code="' + esc(g.code) + '" data-cat="' + esc(val) + '">' + esc(label) + '</button>'; };
     return '<div class="catbar" role="group" aria-label="กรองหมวดสินค้า">' + chip('', 'ทั้งหมด') + cats.map(function (c) { return chip(c, c); }).join('') + '</div>';
+  }
+
+
+  // ---------- การ์ดสินค้า / แผ่นรายละเอียด / ตราเหลือเวลา ----------
+  var CLOCK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  var BAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8zM9 8V6a3 3 0 0 1 6 0v2"/></svg>';
+  // ตราเหลือเวลา แสดงเฉพาะ Lot ที่ใกล้ปิดรับ (ไม่เกิน 2 วัน): 24 ชม. ขึ้นไปนับเป็นวัน (ปัดลง) ต่ำกว่านั้นนับเป็นชั่วโมง (ปัดขึ้น)
+  function closeBadge(iso) {
+    var h = (new Date(iso).getTime() - Date.now()) / 36e5;
+    if (!(h > 0) || h > 48) return '';
+    var hot = h < 24;
+    return '<span class="g-badge' + (hot ? ' hot' : '') + '">' + CLOCK_ICON + (hot ? Math.max(1, Math.ceil(h)) + ' ชม.' : Math.floor(h / 24) + ' วัน') + '</span>';
+  }
+  function variantRow(p, o, oi, hasOptImg) {
+    var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
+    return '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '" data-oi="' + oi + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + '</span>' +
+      '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
+      '<output aria-live="off">' + q + '</output>' +
+      '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
+  }
+  function productCount(p) {
+    return (p.options.length ? p.options : ['']).reduce(function (n, o) { return n + (S.qty[qtyKey(p.productId, o)] || 0); }, 0);
+  }
+  function cardHtml(p) {
+    var opts = p.options.length ? p.options : [''], n = productCount(p), ctl;
+    if (opts.length > 1) {
+      ctl = '<span class="pc-btn">' + (n ? n + ' ชิ้น' : 'เลือก') + '</span>';
+    } else {
+      var k = qtyKey(p.productId, opts[0]), q = S.qty[k] || 0;
+      ctl = '<button type="button" class="pc-add" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name) + '">+</button>' +
+        '<span class="stepper pc-step variant' + (q ? ' has' : '') + '" data-k="' + esc(k) + '"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
+        '<output aria-live="off">' + q + '</output><button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span>';
+    }
+    return '<div class="pcard' + (n ? ' has' : '') + '" data-act="open-sheet" data-p="' + esc(p.productId) + '" role="button" tabindex="0" aria-label="ดูรายละเอียด ' + esc(p.name) + '">' +
+      '<div class="pc-img">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</div>' +
+      '<div class="pc-name">' + esc(p.name) + '</div>' +
+      '<div class="pc-sub">' + (opts.length > 1 ? opts.length + ' ตัวเลือก' : '') + '</div>' +
+      '<div class="pc-foot"><span class="pc-price">' + baht(p.priceThb * 100) + '</span>' + ctl + '</div></div>';
+  }
+  function sheetHtml(pid) {
+    var p = productsById().get(pid);
+    if (!p) return '';
+    var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
+    return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sheet-grip"></div>' +
+      '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
+      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div>' +
+      '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
+      (p.description ? '<p class="sh-desc">' + esc(p.description) + '</p>' : '') +
+      (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +
+      '<div class="variants">' + opts.map(function (o, oi) { return variantRow(p, o, oi, hasOptImg); }).join('') + '</div>' +
+      '<button type="button" class="btn primary block" data-act="close-sheet">เสร็จสิ้น</button></div></div>';
+  }
+  function openSheet(pid) {
+    S.sheet = pid;
+    var root = document.getElementById('sheet-root');
+    if (!root) { root = document.createElement('div'); root.id = 'sheet-root'; document.body.appendChild(root); }
+    root.innerHTML = sheetHtml(pid);
+    document.body.classList.add('sheet-open');
+    var sh = root.querySelector('.sheet');
+    if (sh) sh.focus();
+  }
+  function closeSheet() {
+    S.sheet = '';
+    var root = document.getElementById('sheet-root');
+    if (root) root.innerHTML = '';
+    document.body.classList.remove('sheet-open');
+  }
+  // แตะแถวตัวเลือกในแผ่นรายละเอียด: เปลี่ยนรูปใหญ่เป็นรูปของตัวเลือกนั้น (ไม่มีรูปตัวเลือกก็กลับเป็นรูปหลัก)
+  function showOptionImage(row) {
+    var sh = row.closest('.sheet'), p = sh && productsById().get(sh.getAttribute('data-p'));
+    if (!p) return;
+    var oi = Number(row.getAttribute('data-oi')), src = (p.optionImages || [])[oi] || p.imageUrl || '';
+    var box = sh.querySelector('.sh-img-in'), img = box.querySelector('img');
+    if (src) {
+      if (!img) { img = document.createElement('img'); img.className = 'pimg'; img.setAttribute('referrerpolicy', 'no-referrer'); box.appendChild(img); }
+      img.style.display = ''; img.alt = p.name; img.src = src;
+    } else if (img) img.style.display = 'none';
+    Array.prototype.forEach.call(sh.querySelectorAll('.variant'), function (r) { r.classList.toggle('viewing', r === row); });
+    var cap = sh.querySelector('#sh-cap'), name = (p.options || [])[oi] || '';
+    cap.textContent = name; cap.hidden = !name || !(p.optionImages || [])[oi];
   }
 
   var SCREENS = {
@@ -215,7 +296,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh solid" data-act="my">ออเดอร์ของฉัน</button><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
+      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -225,26 +306,19 @@
       });
       groups.forEach(function (g) {
         html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + '</span>' +
-          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span><span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + catBar(g) + '<ul class="items">';
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + catBar(g) + '<div class="pgrid">';
         g.items.forEach(function (p) {
           if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
-          var opts = p.options.length ? p.options : [''];
-          html += '<li class="item"><div class="item-top">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy" referrerpolicy="no-referrer">' : '') + '<div class="item-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div>' + (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') + '<div class="variants">';
-          var hasOptImg = (p.optionImages || []).some(Boolean);
-          opts.forEach(function (o, oi) {
-            var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
-            html += '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + '</span>' +
-              '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
-              '<output aria-live="off">' + q + '</output>' +
-              '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
-          });
-          html += '</div></li>';
+          html += cardHtml(p);
         });
-        html += '</ul></details>';
+        html += '</div></details>';
       });
       html +=
         '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
-        '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
+        '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>' +
+        '<nav class="tabbar" aria-label="เมนูหลัก"><button type="button" class="tb on" data-act="top" aria-current="page">' + BAG_ICON + '<span>สั่งสินค้า</span></button>' +
+        '<button type="button" class="tb" data-act="my">' + RECEIPT_ICON + '<span>ออเดอร์ของฉัน</span></button>' +
+        '<a class="tb" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อร้าน</span></a></nav>';
       return html;
     },
 
@@ -435,12 +509,21 @@
   function bump(k, delta) {
     var q = Math.max(0, Math.min(MAX_QTY, (S.qty[k] || 0) + delta));
     S.qty[k] = q;
-    var row = app.querySelector('.variant[data-k="' + k.replace(/"/g, '\\"') + '"]');
-    if (row) {
+    // การ์ดในกริดกับแผ่นรายละเอียดอาจแสดงตัวเลือกเดียวกันพร้อมกัน จึงอัปเดตทุกแถวที่ตรงกัน
+    Array.prototype.forEach.call(document.querySelectorAll('.variant[data-k="' + k.replace(/"/g, '\\"') + '"]'), function (row) {
       row.classList.toggle('has', q > 0);
       row.querySelector('output').textContent = q;
       row.querySelector('[data-act=dec]').disabled = q <= 0;
       row.querySelector('[data-act=inc]').disabled = q >= MAX_QTY;
+    });
+    var p = productsById().get(k.split('\u0001')[0]);
+    if (p) {
+      var n = productCount(p);
+      Array.prototype.forEach.call(document.querySelectorAll('.pcard[data-p="' + p.productId.replace(/"/g, '\\"') + '"]'), function (card) {
+        card.classList.toggle('has', n > 0);
+        var b = card.querySelector('.pc-btn');
+        if (b) b.textContent = n ? n + ' ชิ้น' : 'เลือก';
+      });
     }
     refreshTotal();
   }
@@ -647,11 +730,31 @@
   var topBack = document.querySelector('[data-top-back]');
   if (topBack) topBack.addEventListener('click', function () { setScreen('order'); refreshTotal(); loadBootstrap().then(function () { if (S.screen === 'order') { render(); refreshTotal(); } }).catch(function () {}); });
 
-  app.addEventListener('click', function (ev) {
+  // แผ่นรายละเอียดสินค้าอยู่นอก #app (วาดหน้าใหม่แล้วไม่หาย) จึงมีตัวฟังเหตุการณ์ของตัวเอง
+  document.addEventListener('click', function (ev) {
+    var root = document.getElementById('sheet-root');
+    if (!root || !root.contains(ev.target)) return;
+    var row = ev.target.closest('.variant');
+    if (row && !ev.target.closest('.stepper')) { showOptionImage(row); return; }
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
     if (act === 'inc') bump(t.getAttribute('data-k'), 1);
+    else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
+    else if (act === 'close-sheet' && (!t.classList.contains('sheet-ov') || ev.target === t)) closeSheet();
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && S.sheet) closeSheet();
+    else if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('pcard')) { ev.preventDefault(); openSheet(ev.target.getAttribute('data-p')); }
+  });
+
+  app.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]');
+    if (!t) return;
+    var act = t.getAttribute('data-act');
+    if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
+    else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
+    else if (act === 'inc') bump(t.getAttribute('data-k'), 1);
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'submit') submitOrder();
     else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });

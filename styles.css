@@ -640,3 +640,14 @@ body[data-screen="my"] #app { padding-bottom: calc(var(--tab-h) + 28px + env(saf
 /* กดรัวๆ แล้วไม่ให้เบราว์เซอร์มือถือซูมจากการแตะสองครั้ง (ยังซูมด้วยสองนิ้วได้) และไม่เลือกข้อความโดยไม่ตั้งใจ */
 html { touch-action: manipulation; }
 button, [data-act], .pcard, .tabbar, .stepper, summary { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* แผ่นรายละเอียด: รูปค้างอยู่ด้านบน ตอนเลื่อนดูตัวเลือก/คำอธิบายรูปไม่เลื่อนหาย */
+.sh-top { position: sticky; top: 0; z-index: 3; margin: -12px -16px 6px; padding: 12px 16px 8px; background: var(--paper); }
+.sh-top .sheet-grip { margin-bottom: 10px; }
+.sh-top .sh-img { width: min(54vw, 210px); margin: 0 auto; }
+.sheet .pdesc { margin: 8px 0; }
+.sheet .pdesc p { white-space: pre-line; }
+.sh-top { top: -12px; }
+.sheet .sh-head { margin-top: 10px; }
+.sh-top .sh-head { margin-top: 10px; padding-bottom: 2px; }
+.sheet .sh-meta { margin-top: 2px; }

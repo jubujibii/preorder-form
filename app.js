@@ -219,11 +219,11 @@
     var p = productsById().get(pid);
     if (!p) return '';
     var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
-    return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sheet-grip"></div>' +
+    return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sh-top"><div class="sheet-grip"></div>' +
       '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
-      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div>' +
+      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div>' +
       '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
-      (p.description ? '<p class="sh-desc">' + esc(p.description) + '</p>' : '') +
+      (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
       (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +
       '<div class="variants">' + opts.map(function (o, oi) { return variantRow(p, o, oi, hasOptImg); }).join('') + '</div>' +
       '<button type="button" class="btn primary block" data-act="close-sheet">เสร็จสิ้น</button></div></div>';

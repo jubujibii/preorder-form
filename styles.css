@@ -666,3 +666,6 @@ button, [data-act], .pcard, .tabbar, .stepper, summary { -webkit-user-select: no
 /* กล่องคืนเงิน: มาสคอตถูกซ่อนไว้แล้ว จึงเอาที่ว่างด้านบนและหัวใจที่ลอยอยู่ออกด้วย */
 .refundbox { margin-top: 0; }
 .refundbox::before { display: none; }
+
+.linkrow{display:flex;gap:8px;margin:0 0 10px}.linkrow .btn{flex:1;min-height:36px;padding:6px 8px;font-size:13px}
+.payinfo{margin:8px 0;padding:10px 12px;border-radius:12px;background:#fff7ec;border:1px solid #f3d9b5}.payinfo .pi-txt{white-space:pre-line;font-size:13px;line-height:1.5;margin-bottom:8px;word-break:break-word}.payinfo .btn{width:100%;min-height:36px;font-size:13px}

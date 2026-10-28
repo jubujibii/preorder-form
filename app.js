@@ -85,7 +85,7 @@
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
-        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }] };
+        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }], paymentInfo: 'ธนาคารตัวอย่าง\nเลขที่บัญชี 123-4-56789-0\nชื่อบัญชี ทดสอบ' };
       if (params.get('nobill')) res.billing = [];
       if (params.get('refund')) {
         res.billing[0].round1 = { totalSatang: 54000, paid: true, slipAt: null };
@@ -307,6 +307,7 @@
         g.items.push(p);
       });
       var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
+        '<div class="linkrow"><button type="button" class="btn" data-act="copy-link">คัดลอกลิงก์สั่งของ</button><button type="button" class="btn" data-act="open-ext">เปิดนอกแอป</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -412,7 +413,7 @@
                 html += '<div class="slip-done">✓ ส่งสลิปแล้ว · รอร้านตรวจสอบ<small>' + esc(closeText(r.slipAt)) + '</small></div>' +
                   '<label class="slip-redo' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'ส่งผิด? แนบสลิปใหม่') + inp + '</label>';
               } else {
-                html += '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>' +
+                html += payInfoBox(d.paymentInfo) + '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>' +
                   '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : '📎 แนบสลิป') + inp + '</label>';
               }
             }
@@ -636,6 +637,22 @@
     });
   }
 
+  var ORDER_URL = 'https://liff.line.me/' + CFG.LIFF_ID;
+  function copyText(txt, msg) {
+    function ok() { toast(msg); }
+    function fallback() {
+      var t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); ok(); } catch (_) { toast(txt); }
+      document.body.removeChild(t);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback); else fallback();
+  }
+  function payInfoBox(info) {
+    if (!info) return '';
+    return '<div class="payinfo"><div class="pi-txt">' + esc(info) + '</div><button type="button" class="btn" data-act="copy-acct">คัดลอกเลขบัญชี</button></div>';
+  }
+
   var toastTimer = null;
   function toast(msg) {
     var el = document.getElementById('toast');
@@ -775,6 +792,9 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') goOrder();
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'copy-link') copyText(ORDER_URL, 'คัดลอกลิงก์แล้ว ✓');
+    else if (act === 'copy-acct') { var pi = (S.my && S.my.paymentInfo) || ''; var m = pi.match(/\d[\d\- ]{6,}\d/); copyText(m ? m[0].replace(/[\s-]/g, '') : pi, m ? 'คัดลอกเลขบัญชีแล้ว ✓' : 'คัดลอกข้อมูลชำระเงินแล้ว ✓'); }
+    else if (act === 'open-ext') { try { L.openWindow({ url: ORDER_URL, external: true }); } catch (_) { window.open(ORDER_URL, '_blank'); } }
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
     else if (act === 'cat') { S.cat[t.getAttribute('data-code')] = t.getAttribute('data-cat') || ''; keepScroll(); }

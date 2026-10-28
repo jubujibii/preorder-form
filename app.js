@@ -429,7 +429,7 @@
                   '<label class="slip-redo' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'ส่งผิด? แนบสลิปใหม่') + inp + '</label>';
               } else {
                 html += payInfoBox(d.paymentInfo) + '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>' +
-                  '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : '📎 แนบสลิป') + inp + '</label>';
+                  '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'แนบสลิป') + inp + '</label>';
               }
             }
             html += '</div>';
@@ -663,9 +663,10 @@
     }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback); else fallback();
   }
+  var COPY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
   function payInfoBox(info) {
     if (!info) return '';
-    return '<div class="payinfo"><div class="pi-txt">' + esc(info) + '</div><button type="button" class="btn" data-act="copy-acct">คัดลอกเลขบัญชี</button></div>';
+    return '<div class="payinfo"><div class="pi-head">โอนเข้าบัญชี</div><div class="pi-txt">' + esc(info) + '</div><button type="button" class="pi-copy" data-act="copy-acct">' + COPY_ICON + 'คัดลอกเลขบัญชี</button></div>';
   }
 
   var toastTimer = null;

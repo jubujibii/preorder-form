@@ -237,17 +237,12 @@
     if (type === 'p') {
       var p = productsById().get(id);
       if (!p) return '';
-      var u = urgencyText(p.closeAt);
-      return [p.name, baht(p.priceThb * 100), 'Lot ' + p.preorderCode + ' ปิดรับ ' + closeText(p.closeAt)].concat(u ? [u] : [], ['', 'สั่งเลย: ' + shareLink('p=' + encodeURIComponent(id))]).join('\n');
+      return p.name + ' ' + baht(p.priceThb * 100) + '\n📌 : ' + shareLink('p=' + encodeURIComponent(id));
     }
     var items = S.products.filter(function (x) { return x.preorderCode === id; });
     if (!items.length) return '';
-    var ul = urgencyText(items[0].closeAt), shown = items.slice(0, 12);
-    var lines = ['พรีออเดอร์ Lot ' + id, 'ปิดรับ ' + closeText(items[0].closeAt)].concat(ul ? ['ใกล้ปิดแล้ว ' + ul] : [], ['']);
-    shown.forEach(function (x) { lines.push('• ' + x.name + ' ' + baht(x.priceThb * 100)); });
-    if (items.length > shown.length) lines.push('และอีก ' + (items.length - shown.length) + ' รายการ');
-    lines.push('', 'ดูและสั่งเลย: ' + shareLink('lot=' + encodeURIComponent(id)));
-    return lines.join('\n');
+    var prices = items.map(function (x) { return x.priceThb; }), lo = Math.min.apply(null, prices), hi = Math.max.apply(null, prices);
+    return 'สินค้าเปิดใหม่ Lot ' + id + ' ค่าา\nราคา ' + (lo === hi ? baht(lo * 100) : baht(lo * 100) + ' - ' + baht(hi * 100)) + '\n📌 : ' + shareLink('lot=' + encodeURIComponent(id));
   }
   function closeShareMenu() { var m = document.getElementById('share-menu'); if (m) m.remove(); }
   function openShareMenu(btn, type, id) {

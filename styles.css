@@ -691,5 +691,13 @@ body[data-screen="order"] .group[open] .catbar{position:sticky;top:calc(var(--hd
 .stickytabs .st.active .st-n{opacity:.85}
 .group > summary .g-tags{grid-column:3;grid-row:2;margin-top:0;justify-content:flex-end;align-self:center;flex-wrap:wrap;max-width:190px}
 .group > summary .g-tags .stage{white-space:nowrap}
-.group > summary .g-tags:has(.stage:nth-child(2)){grid-column:2 / -1;grid-row:auto;margin-top:8px;justify-content:flex-start;max-width:none}
+.group > summary .g-tags.is-open{grid-column:2 / -1;grid-row:3;margin-top:8px;justify-content:flex-start;max-width:none}
 .stage.s-more{border:0;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--accent-soft,#FBE3D6);color:var(--accent-dark);min-width:34px;text-align:center;-webkit-tap-highlight-color:transparent}
+.group > summary .g-title{grid-column:2 / -1;padding-right:30px}
+.group > summary .g-tags{flex-wrap:nowrap;max-width:none}
+.group > summary .g-tags.is-open{flex-wrap:wrap}
+.group > summary .g-title{grid-row:1}
+.group > summary .g-meta{grid-row:2;grid-column:2}
+.group > summary .g-tags{grid-row:2;grid-column:3}
+.group > summary .g-tags.is-open{grid-row:3;grid-column:2 / -1}
+.group > summary .g-cnt{grid-row:3}

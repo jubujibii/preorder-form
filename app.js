@@ -395,10 +395,10 @@
         list.forEach(function (o) { n[stageOf(o)] = true; });
         var keys = STAGE_ORDER.filter(function (k) { return n[k]; });
         var open = !!(S.tagsOpen && S.tagsOpen[code]);
-        var shownKeys = keys.length > 2 && !open ? keys.slice(0, 2) : keys;
+        var shownKeys = keys.length > 2 && !open ? keys.slice(0, 1) : keys;
         var chips = shownKeys.map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + '</span>'; }).join('');
-        if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 2)) + '</button>';
-        return '<span class="g-tags">' + chips + '</span>';
+        if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 1)) + '</button>';
+        return '<span class="g-tags' + (open && keys.length > 2 ? ' is-open' : '') + '">' + chips + '</span>';
       }
       function renderGroups(list) {
         var html = '';
@@ -731,6 +731,17 @@
   }
   window.addEventListener('scroll', syncStickyTabs, { passive: true });
 
+  // เปลี่ยนหมวดแล้วพากลับไปที่สินค้าแรกของ Lot นั้น (ถ้าลูกค้าเลื่อนลงมาไกลแล้ว) ไม่ต้องเลื่อนขึ้นเอง
+  function scrollToLotTop(code) {
+    var g = Array.prototype.filter.call(document.querySelectorAll('details.group'), function (x) { return x.getAttribute('data-code') === code; })[0];
+    var grid = g && g.querySelector('.pgrid'), bar = g && g.querySelector('.catbar'), sm = g && g.querySelector('summary');
+    if (!grid) return;
+    var hd = document.querySelector('header.top');
+    var stick = (hd ? hd.offsetHeight : 0) + (sm ? sm.offsetHeight : 0) + (bar ? bar.offsetHeight : 0) + 6;
+    var top = grid.getBoundingClientRect().top;
+    if (top < stick) window.scrollTo(0, top + window.scrollY - stick);
+  }
+
   function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
 
   // ลิงก์จากข้อความแจ้งยอด (?page=my) เปิดหน้า "ออเดอร์ของฉัน" ตรงๆ; LIFF อาจห่อพารามิเตอร์ไว้ใน liff.state
@@ -854,7 +865,7 @@
     else if (act === 'copy-acct') { var pi = (S.my && S.my.paymentInfo) || ''; var m = pi.match(/\d[\d\- ]{6,}\d/); copyText(m ? m[0].replace(/[\s-]/g, '') : pi, m ? 'คัดลอกเลขบัญชีแล้ว ✓' : 'คัดลอกข้อมูลชำระเงินแล้ว ✓'); }
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
-    else if (act === 'cat') { S.cat[t.getAttribute('data-code')] = t.getAttribute('data-cat') || ''; keepScroll(); }
+    else if (act === 'cat') { var cc = t.getAttribute('data-code'); S.cat[cc] = t.getAttribute('data-cat') || ''; keepScroll(); scrollToLotTop(cc); }
     else if (act === 'tab') { var fromBar = !!t.closest('.stickytabs') && document.body.classList.contains('st-on'); S.myTab = t.getAttribute('data-tab'); if (MORE_TAB_KEYS.indexOf(S.myTab) >= 0) S.myMore = true; S.edit = null; S.confirmCancel = ''; render(); if (fromBar) { var mb = document.querySelector('.mybuy'); if (mb) window.scrollTo(0, mb.getBoundingClientRect().bottom + window.scrollY - 46); } syncStickyTabs(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }

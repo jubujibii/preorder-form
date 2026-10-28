@@ -777,3 +777,15 @@ body[data-screen="order"] .group[open] > summary{position:static;border-bottom:0
 /* พื้นหลังแถวที่ตรึง: สีครีมโปร่ง + เบลอ ไม่มีเส้น; ซ่อนตอนเลื่อนลง */
 body[data-screen="order"] .titlerow-order,#lot-now{background:rgba(249,244,234,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:0;box-shadow:none;transition:opacity .18s ease}
 body.ttl-hide[data-screen="order"] .titlerow-order,body.ttl-hide #lot-now{opacity:0;pointer-events:none}
+
+/* ชื่อ Lot ตรึงใต้หัวเว็บ (ใต้แถวหัวข้อ; ถ้าแถวหัวข้อซ่อนอยู่ก็ชิดหัวเว็บ) */
+body[data-screen="order"] .group[open] > summary{position:sticky;top:calc(var(--hdr-h,59px) + var(--ttl-h,0px));z-index:30;background:transparent;transition:top .18s ease}
+body.ttl-hide[data-screen="order"] .group[open] > summary{top:var(--hdr-h,59px)}
+body[data-screen="order"] .group[open] > summary.is-stuck{background:var(--paper);border-bottom:1px solid var(--line);border-radius:0 0 16px 16px;box-shadow:-14px 0 0 var(--paper),14px 0 0 var(--paper),0 4px 8px rgba(58,42,33,.05)}
+/* สินค้าแนะนำ */
+.pop{margin:0 0 14px}
+.pop-h{display:flex;align-items:baseline;gap:8px;font-size:17px;margin:0 0 8px}
+.pop-h small{font-size:12px;font-weight:400;color:var(--muted)}
+.pop-row{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;margin:0 -16px;padding-left:16px;padding-right:16px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pop-row::-webkit-scrollbar{display:none}
+.pop-row .pcard{flex:none;width:148px;scroll-snap-align:start}

@@ -70,8 +70,8 @@
   function mockApi(p) {
     var closeAt = new Date(Date.now() + 5 * 86400000).toISOString();
     var products = params.get('empty') === '1' ? [] : [
-      { productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
-      { productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
+      { orders: 12, productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
+      { orders: 7, productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
       { productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
       { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
@@ -173,6 +173,7 @@
   function allCategories() {
     var seen = [], n = {};
     S.products.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); n[c] = (n[c] || 0) + 1; });
+    seen.sort(function (a, b) { return (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'th'); });
     return { list: seen, count: n };
   }
   function catButton() {
@@ -348,6 +349,15 @@
   function productCount(p) {
     return (p.options.length ? p.options : ['']).reduce(function (n, o) { return n + (S.qty[qtyKey(p.productId, o)] || 0); }, 0);
   }
+  // สินค้าแนะนำ: รายการที่มีคนสั่งเยอะ (เซิร์ฟเวอร์ส่งจำนวนที่สั่งมาใน orders) แสดงแถวเลื่อนแนวนอนก่อนรายการ Lot
+  var POPULAR_MIN = 3, POPULAR_MAX = 10;
+  function popularHtml() {
+    var list = S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && (!S.catAll || (p.category || 'อื่น ๆ') === S.catAll); })
+      .sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); }).slice(0, POPULAR_MAX);
+    if (!list.length) return '';
+    return '<section class="pop" aria-label="สินค้าแนะนำ"><h2 class="pop-h">สินค้าแนะนำ<small>คนสั่งเยอะ</small></h2><div class="pop-row">' + list.map(cardHtml).join('') + '</div></section>';
+  }
+
   function cardHtml(p) {
     var opts = p.options.length ? p.options : [''], n = productCount(p), ctl;
     if (opts.length > 1) {
@@ -458,6 +468,7 @@
       var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + catButton() + '</div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
+      html += popularHtml();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
       groups.sort(function (a, b) {
         var d = new Date(a.closeAt).getTime() - new Date(b.closeAt).getTime();
@@ -864,35 +875,18 @@
     if (t && t.matches && t.matches('input[data-slip]') && t.files && t.files[0]) sendSlip(t.getAttribute('data-slip'), t.files[0]);
   });
 
-  // แถบ "กำลังดู Lot ไหน": โผล่ใต้แถวหัวข้อที่ตรึงไว้ เมื่อเลื่อนผ่านหัว Lot ที่กางอยู่ไปแล้ว
+  // ชื่อ Lot ที่กางอยู่ตรึงใต้หัวเว็บตอนเลื่อน: ใส่คลาส is-stuck เมื่อกำลังลอยอยู่ (เพื่อทำมุมล่างมน/เงา)
   function syncLotNow() {
-    var el = document.getElementById('lot-now');
-    if (S.screen !== 'order') { if (el) el.hidden = true; return; }
+    var old = document.getElementById('lot-now'); if (old) old.remove();
+    if (S.screen !== 'order') return;
     var hd = document.querySelector('header.top'), tt = document.querySelector('.titlerow-order');
-    var line = (hd ? hd.getBoundingClientRect().bottom : 0) + (tt ? tt.offsetHeight : 0);
-    var cur = null;
-    Array.prototype.forEach.call(document.querySelectorAll('details.group[open]'), function (g) {
-      var sm = g.querySelector('summary'), r = g.getBoundingClientRect();
-      if (sm && sm.getBoundingClientRect().bottom < line && r.bottom > line + 60) cur = g;
+    var hidden = document.body.classList.contains('ttl-hide');
+    var line = (hd ? hd.getBoundingClientRect().bottom : 0) + (hidden || !tt ? 0 : tt.offsetHeight);
+    Array.prototype.forEach.call(document.querySelectorAll('details.group > summary'), function (sm) {
+      var g = sm.parentNode, stuck = g.open && sm.getBoundingClientRect().top <= line + 1 && g.getBoundingClientRect().bottom > line + sm.offsetHeight;
+      sm.classList.toggle('is-stuck', !!stuck);
     });
-    if (!cur) { if (el) el.hidden = true; return; }
-    if (!el) { el = document.createElement('div'); el.id = 'lot-now'; document.body.appendChild(el); }
-    var meta = cur.querySelector('.g-meta'), n = cur.querySelectorAll('.pcard').length;
-    var metaText = meta ? meta.textContent.replace(/\s*·\s*\d+ รายการ\s*$/, '') : '';
-    el.innerHTML = '<span class="ln-chip">Lot ' + esc(cur.getAttribute('data-code')) + '</span><span class="ln-txt">' + esc(metaText) + ' · ' + n + ' รายการ</span>';
-    el.style.top = line + 'px';
-    el.hidden = false;
   }
-  // แถวหัวข้อ/ป้าย Lot ที่ตรึง: ซ่อนตอนเลื่อนลง โผล่ตอนเลื่อนขึ้น (ใกล้บนสุดแสดงเสมอ)
-  var lastScrollY = 0;
-  window.addEventListener('scroll', function () {
-    var y = window.scrollY, dy = y - lastScrollY;
-    if (y < 80) document.body.classList.remove('ttl-hide');
-    else if (dy > 6) document.body.classList.add('ttl-hide');
-    else if (dy < -6) document.body.classList.remove('ttl-hide');
-    if (Math.abs(dy) > 6 || y < 80) lastScrollY = y;
-  }, { passive: true });
-
   var lotNowTick = false;
   window.addEventListener('scroll', function () {
     if (lotNowTick) return;

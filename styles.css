@@ -719,3 +719,11 @@ body[data-screen="order"] .group[open] .catbar{position:sticky;top:calc(var(--hd
 .payinfo .pi-head{display:none}
 .payinfo .pi-txt{flex:1;min-width:0;margin:0;font-size:13px;line-height:1.55;color:var(--ink)}
 .payinfo .pi-copy{display:inline-flex;flex:none;width:auto;border:1px solid var(--accent-line);background:var(--paper);color:var(--accent-dark);font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px}
+
+.share-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--accent-line);background:var(--paper);color:var(--accent-dark);padding:0;cursor:pointer;margin-left:auto}
+.share-btn svg,.share-pill svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sh-head{align-items:center}
+.sh-head .price{margin-left:auto}
+.sh-head .share-btn{margin-left:8px}
+.lot-share{display:flex;justify-content:flex-end;margin:2px 0 8px}
+.share-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent-line);background:var(--paper);color:var(--accent-dark);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}

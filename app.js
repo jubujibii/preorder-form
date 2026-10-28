@@ -61,6 +61,8 @@
     L = {
       init: function () { return Promise.resolve(); }, isLoggedIn: function () { return true; }, login: function () {},
       getAccessToken: function () { return 'mock-token'; },
+      isInClient: function () { return params.get('noshare') !== '1'; }, isApiAvailable: function () { return true; },
+      shareTargetPicker: function (m) { console.log('shareTargetPicker', JSON.stringify(m)); window.__shared = m; return Promise.resolve({ status: 'success' }); },
       getProfile: function () { return Promise.resolve({ displayName: 'ลูกค้าทดสอบ' }); },
       getFriendship: function () { return params.get('friend') === '0' ? Promise.resolve({ friendFlag: false }) : params.get('friend') === 'err' ? Promise.reject(new Error('x')) : Promise.resolve({ friendFlag: true }); },
     };
@@ -181,6 +183,68 @@
   var CLOCK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
   var BAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8zM9 8V6a3 3 0 0 1 6 0v2"/></svg>';
   // ตราเหลือเวลา แสดงเฉพาะ Lot ที่ใกล้ปิดรับ (ไม่เกิน 2 วัน): 24 ชม. ขึ้นไปนับเป็นวัน (ปัดลง) ต่ำกว่านั้นนับเป็นชั่วโมง (ปัดขึ้น)
+  // ---------- แชร์สินค้า / Lot เข้ากลุ่ม (LINE share target picker) ----------
+  var SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>';
+  function canShare() {
+    try { return !!(L.isInClient && L.isInClient() && L.isApiAvailable && L.isApiAvailable('shareTargetPicker')); } catch (_) { return false; }
+  }
+  function shareBtn(act, attr, label) {
+    return canShare() ? '<button type="button" class="share-btn" data-act="' + act + '" ' + attr + ' aria-label="' + label + '">' + SHARE_ICON + '</button>' : '';
+  }
+  function lotShareRow(code) {
+    return canShare() ? '<div class="lot-share"><button type="button" class="share-pill" data-act="share-lot" data-code="' + esc(code) + '">' + SHARE_ICON + 'แชร์ Lot นี้</button></div>' : '';
+  }
+  function shareLink(q) { return 'https://liff.line.me/' + CFG.LIFF_ID + '?' + q; }
+  // ข้อความเร่งปิดรับ: เหลือน้อยกว่า 48 ชม. เท่านั้น
+  function urgencyText(iso) {
+    var h = (new Date(iso).getTime() - Date.now()) / 36e5;
+    if (!(h > 0) || h > 48) return '';
+    return h < 24 ? 'เหลืออีกไม่ถึง ' + Math.max(1, Math.ceil(h)) + ' ชั่วโมง' : 'เหลืออีก ' + Math.floor(h / 24) + ' วัน';
+  }
+  function flexText(text, o) { var t = { type: 'text', text: text, wrap: true }; for (var k in o) t[k] = o[k]; return t; }
+  function sharePick(messages, okMsg) {
+    L.shareTargetPicker(messages).then(function (r) { if (r && r.status === 'success') toast(okMsg); }).catch(function () { toast('แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+  }
+  function shareProduct(pid) {
+    var p = productsById().get(pid);
+    if (!p) return;
+    var urgent = urgencyText(p.closeAt);
+    var body = [flexText(p.name, { weight: 'bold', size: 'md' }), flexText(baht(p.priceThb * 100), { weight: 'bold', size: 'lg', color: '#C2472B', margin: 'sm' }),
+      flexText('Lot ' + p.preorderCode + ' · ปิดรับ ' + closeText(p.closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
+    if (urgent) body.push(flexText('⏰ ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'sm' }));
+    var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'สั่งเลย', uri: shareLink('p=' + encodeURIComponent(pid)) } }] } };
+    if (/^https:\/\//.test(p.imageUrl || '')) bubble.hero = { type: 'image', url: p.imageUrl, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' };
+    sharePick([{ type: 'flex', altText: p.name + ' ' + baht(p.priceThb * 100) + ' · สั่งเลยที่ PRE2PET', contents: bubble }], 'แชร์แล้ว ✓');
+  }
+  function shareLot(code) {
+    var items = S.products.filter(function (p) { return p.preorderCode === code; });
+    if (!items.length) return;
+    var urgent = urgencyText(items[0].closeAt), shown = items.slice(0, 6);
+    var rows = shown.map(function (p) {
+      return { type: 'box', layout: 'horizontal', margin: 'sm', contents: [flexText(p.name, { size: 'sm', flex: 4 }), flexText(baht(p.priceThb * 100), { size: 'sm', align: 'end', flex: 2, color: '#C2472B' })] };
+    });
+    if (items.length > shown.length) rows.push(flexText('และอีก ' + (items.length - shown.length) + ' รายการ', { size: 'xs', color: '#8C7A6D', margin: 'sm' }));
+    var body = [flexText('พรีออเดอร์ Lot ' + code, { weight: 'bold', size: 'lg' }), flexText('ปิดรับ ' + closeText(items[0].closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
+    if (urgent) body.push(flexText('⏰ ใกล้ปิดแล้ว ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'md' }));
+    body.push({ type: 'separator', margin: 'md' });
+    var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body.concat(rows) }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'ดูและสั่งเลย', uri: shareLink('lot=' + encodeURIComponent(code)) } }] } };
+    sharePick([{ type: 'flex', altText: 'พรีออเดอร์ Lot ' + code + (urgent ? ' · ' + urgent : '') + ' · PRE2PET', contents: bubble }], 'แชร์ Lot แล้ว ✓');
+  }
+  // เปิดจากลิงก์ที่แชร์ (?p=รหัสสินค้า หรือ ?lot=รหัส Lot) -> กาง Lot นั้น / เปิดแผ่นสินค้า
+  function linkParam(name) {
+    var q = new URLSearchParams(location.search), st = q.get('liff.state');
+    return q.get(name) || (st ? new URLSearchParams(st.replace(/^\?/, '')).get(name) : '') || '';
+  }
+  function openFromLink() {
+    var pid = linkParam('p'), lot = linkParam('lot'), p = pid && productsById().get(pid);
+    if (p) { S.open[p.preorderCode] = true; render(); openSheet(pid); return; }
+    if (lot && S.products.some(function (x) { return x.preorderCode === lot; })) {
+      S.open[lot] = true; render();
+      var el = document.querySelector('details.group[data-code="' + (window.CSS && CSS.escape ? CSS.escape(lot) : lot) + '"]');
+      if (el) el.scrollIntoView();
+    }
+  }
+
   function closeBadge(iso) {
     var h = (new Date(iso).getTime() - Date.now()) / 36e5;
     if (!(h > 0) || h > 48) return '';
@@ -228,7 +292,7 @@
     var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
     return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sh-top"><div class="sheet-grip"></div>' +
       '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
-      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span></div></div>' +
+      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span>' + shareBtn('share-p', 'data-p="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
       '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
       (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
       (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +
@@ -323,7 +387,7 @@
       });
       groups.forEach(function (g) {
         html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + '</span>' +
-          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + catBar(g) + '<div class="pgrid">';
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + lotShareRow(g.code) + catBar(g) + '<div class="pgrid">';
         g.items.forEach(function (p) {
           if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
           html += cardHtml(p);
@@ -764,7 +828,7 @@
     if (!S.friend) return setScreen('friend');
     if (registered && wantsMyPage()) return showMy();
     setScreen(registered ? 'order' : 'register');
-    if (registered) refreshTotal();
+    if (registered) { refreshTotal(); openFromLink(); }
   }
 
   function recheckFriend() {
@@ -841,7 +905,8 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'inc') bump(t.getAttribute('data-k'), 1);
+    if (act === 'share-p') shareProduct(t.getAttribute('data-p'));
+    else if (act === 'inc') bump(t.getAttribute('data-k'), 1);
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'close-sheet' && (!t.classList.contains('sheet-ov') || ev.target === t)) closeSheet();
   });
@@ -854,7 +919,8 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
+    if (act === 'share-lot') { ev.preventDefault(); shareLot(t.getAttribute('data-code')); }
+    else if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
     else if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
     else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
     else if (act === 'inc') bump(t.getAttribute('data-k'), 1);

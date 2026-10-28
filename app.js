@@ -165,6 +165,38 @@
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
   // แถบกรองหมวดในแต่ละ Lot: แสดงเมื่อ Lot นั้นมีมากกว่า 1 หมวด (สินค้าที่ไม่ระบุหมวดนับเป็น "อื่น ๆ")
+  // ตัวกรองหมวดบนสุดของหน้าสั่งของ (ใช้กับทุก Lot พร้อมกัน)
+  function allCategories() {
+    var seen = [], n = {};
+    S.products.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); n[c] = (n[c] || 0) + 1; });
+    return { list: seen, count: n };
+  }
+  function catButton() {
+    var ac = allCategories();
+    if (ac.list.length < 2) return '';
+    if (S.catAll && ac.list.indexOf(S.catAll) < 0) S.catAll = '';
+    return '<button type="button" class="cat-btn' + (S.catAll ? ' on' : '') + '" data-act="cat-menu" aria-haspopup="true"><span class="cb-t">' + esc(S.catAll || 'ทั้งหมด') + '</span><i>▾</i></button>';
+  }
+  function openCatMenu(btn) {
+    var had = document.getElementById('cat-menu');
+    if (had) { had.remove(); return; }
+    var ac = allCategories(), total = S.products.length;
+    var m = document.createElement('div');
+    m.id = 'cat-menu';
+    function item(val, label, n) { return '<button type="button" class="' + ((S.catAll || '') === val ? 'on' : '') + '" data-act="cat-pick" data-cat="' + esc(val) + '">' + esc(label) + '<small>' + n + '</small></button>'; }
+    m.innerHTML = item('', 'ทั้งหมด', total) + ac.list.map(function (c) { return item(c, c, ac.count[c]); }).join('');
+    document.body.appendChild(m);
+    var r = btn.getBoundingClientRect();
+    m.style.top = (r.bottom + 6) + 'px';
+    m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act="cat-menu"], #cat-menu [data-act="cat-pick"]'), m = document.getElementById('cat-menu');
+    if (t && t.getAttribute('data-act') === 'cat-menu') { ev.preventDefault(); openCatMenu(t); return; }
+    if (t) { S.catAll = t.getAttribute('data-cat') || ''; if (S.catAll) S.products.forEach(function (p) { if ((p.category || 'อื่น ๆ') === S.catAll) S.open[p.preorderCode] = true; }); if (m) m.remove(); render(); window.scrollTo(0, 0); refreshTotal(); return; }
+    if (m) m.remove();
+  });
+
   function lotCategories(g) {
     var seen = [];
     g.items.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); });
@@ -419,7 +451,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions">' + refreshBtn('refresh', S.refreshing) + '</div></div>' +
+      var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + refreshBtn('refresh', S.refreshing) + catButton() + '</div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -428,12 +460,11 @@
         return d || String(a.code).localeCompare(String(b.code), 'th', { numeric: true });
       });
       groups.forEach(function (g) {
+        var items = g.items.filter(function (p) { return !S.catAll || (p.category || 'อื่น ๆ') === S.catAll; });
+        if (!items.length) return; // เลือกหมวดแล้ว Lot ที่ไม่มีสินค้าหมวดนั้นซ่อนไป
         html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + lotShareIcon(g.code) + '</span>' +
-          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' +  catBar(g) + '<div class="pgrid">';
-        g.items.forEach(function (p) {
-          if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
-          html += cardHtml(p);
-        });
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + (S.catAll ? ' · ' + items.length + ' รายการ' : '') + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><div class="pgrid">';
+        items.forEach(function (p) { html += cardHtml(p); });
         html += '</div></details>';
       });
       html +=

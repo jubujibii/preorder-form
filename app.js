@@ -192,7 +192,7 @@
     return canShare() ? '<button type="button" class="share-btn" data-act="' + act + '" ' + attr + ' aria-label="' + label + '">' + SHARE_ICON + '</button>' : '';
   }
   function lotShareIcon(code) {
-    return canShare() ? '<button type="button" class="share-btn lot-share-ic" data-act="share-lot" data-code="' + esc(code) + '" aria-label="แชร์ Lot นี้">' + SHARE_ICON + '</button>' : '';
+    return canShare() ? '<button type="button" class="share-btn lot-share-ic" data-act="share-menu" data-type="lot" data-id="' + esc(code) + '" aria-label="แชร์ Lot นี้">' + SHARE_ICON + '</button>' : '';
   }
   function shareLink(q) { return 'https://liff.line.me/' + CFG.LIFF_ID + '?' + q; }
   // ข้อความเร่งปิดรับ: เหลือน้อยกว่า 48 ชม. เท่านั้น
@@ -232,6 +232,51 @@
     var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body.concat(rows) }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'ดูและสั่งเลย', uri: shareLink('lot=' + encodeURIComponent(code)) } }] } };
     sharePick([{ type: 'flex', altText: 'พรีออเดอร์ Lot ' + code + (urgent ? ' · ' + urgent : '') + ' · PRE2PET', contents: bubble }], 'แชร์ Lot แล้ว ✓');
   }
+  // ข้อความโพสต์สำหรับ Open Chat (LINE ไม่ให้แชร์การ์ดเข้า Open Chat ได้) คัดลอกไปวางเอง
+  function postText(type, id) {
+    if (type === 'p') {
+      var p = productsById().get(id);
+      if (!p) return '';
+      var u = urgencyText(p.closeAt);
+      return [p.name, baht(p.priceThb * 100), 'Lot ' + p.preorderCode + ' ปิดรับ ' + closeText(p.closeAt)].concat(u ? [u] : [], ['', 'สั่งเลย: ' + shareLink('p=' + encodeURIComponent(id))]).join('\n');
+    }
+    var items = S.products.filter(function (x) { return x.preorderCode === id; });
+    if (!items.length) return '';
+    var ul = urgencyText(items[0].closeAt), shown = items.slice(0, 12);
+    var lines = ['พรีออเดอร์ Lot ' + id, 'ปิดรับ ' + closeText(items[0].closeAt)].concat(ul ? ['ใกล้ปิดแล้ว ' + ul] : [], ['']);
+    shown.forEach(function (x) { lines.push('• ' + x.name + ' ' + baht(x.priceThb * 100)); });
+    if (items.length > shown.length) lines.push('และอีก ' + (items.length - shown.length) + ' รายการ');
+    lines.push('', 'ดูและสั่งเลย: ' + shareLink('lot=' + encodeURIComponent(id)));
+    return lines.join('\n');
+  }
+  function closeShareMenu() { var m = document.getElementById('share-menu'); if (m) m.remove(); }
+  function openShareMenu(btn, type, id) {
+    var open = document.getElementById('share-menu');
+    var same = open && open.getAttribute('data-type') === type && open.getAttribute('data-id') === id;
+    closeShareMenu();
+    if (same) return;
+    var m = document.createElement('div');
+    m.id = 'share-menu'; m.setAttribute('data-type', type); m.setAttribute('data-id', id);
+    m.innerHTML = '<button type="button" data-act="share-send">ส่งเข้าแชท/กลุ่ม LINE<small>เป็นการ์ดมีรูป</small></button><button type="button" data-act="share-copy">คัดลอกข้อความ<small>ไปวางใน Open Chat</small></button>';
+    document.body.appendChild(m);
+    var r = btn.getBoundingClientRect();
+    m.style.top = Math.min(r.bottom + 6, window.innerHeight - m.offsetHeight - 8) + 'px';
+    m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  }
+  document.addEventListener('click', function (ev) {
+    var m = document.getElementById('share-menu');
+    var t = ev.target.closest('[data-act="share-menu"], #share-menu [data-act]');
+    if (t && t.getAttribute('data-act') === 'share-menu') { ev.preventDefault(); openShareMenu(t, t.getAttribute('data-type'), t.getAttribute('data-id')); return; }
+    if (t && m && m.contains(t)) {
+      var type = m.getAttribute('data-type'), id = m.getAttribute('data-id');
+      closeShareMenu();
+      if (t.getAttribute('data-act') === 'share-send') { if (type === 'p') shareProduct(id); else shareLot(id); }
+      else copyText(postText(type, id), 'คัดลอกข้อความแล้ว ✓');
+      return;
+    }
+    if (m) closeShareMenu();
+  });
+
   // เปิดจากลิงก์ที่แชร์ (?p=รหัสสินค้า หรือ ?lot=รหัส Lot) -> กาง Lot นั้น / เปิดแผ่นสินค้า
   function linkParam(name) {
     var q = new URLSearchParams(location.search), st = q.get('liff.state');
@@ -294,7 +339,7 @@
     var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
     return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sh-top"><div class="sheet-grip"></div>' +
       '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
-      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span>' + shareBtn('share-p', 'data-p="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
+      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span>' + shareBtn('share-menu', 'data-type="p" data-id="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
       '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
       (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
       (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +
@@ -907,8 +952,7 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'share-p') shareProduct(t.getAttribute('data-p'));
-    else if (act === 'inc') bump(t.getAttribute('data-k'), 1);
+    if (act === 'inc') bump(t.getAttribute('data-k'), 1);
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'close-sheet' && (!t.classList.contains('sheet-ov') || ev.target === t)) closeSheet();
   });
@@ -921,8 +965,7 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'share-lot') { ev.preventDefault(); shareLot(t.getAttribute('data-code')); }
-    else if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
+    if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
     else if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
     else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
     else if (act === 'inc') bump(t.getAttribute('data-k'), 1);

@@ -72,9 +72,9 @@
     var products = params.get('empty') === '1' ? [] : [
       { orders: 12, productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
       { orders: 7, productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
-      { productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
+      { orders: 5, productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
-      { productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
+      { orders: 4, productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     if (params.get('desc') && products[0]) products[0].description = 'ผ้านุ่มหนา ซักเครื่องได้\nขนาด 60 × 45 ซม. เหมาะกับแมวน้ำหนักไม่เกิน 6 กก.\nสีอาจต่างจากภาพเล็กน้อย';
     if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
@@ -138,7 +138,7 @@
       var sm = app.querySelector('.group > summary'); if (sm) document.documentElement.style.setProperty('--sum-h', sm.offsetHeight + 'px');
       var tt = app.querySelector('.titlerow-order'); document.documentElement.style.setProperty('--ttl-h', (tt ? tt.offsetHeight : 0) + 'px');
     }
-    syncLotNow();
+    syncLotNow(); requestAnimationFrame(syncLotNow);
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
     if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }
@@ -350,12 +350,14 @@
     return (p.options.length ? p.options : ['']).reduce(function (n, o) { return n + (S.qty[qtyKey(p.productId, o)] || 0); }, 0);
   }
   // สินค้าแนะนำ: รายการที่มีคนสั่งเยอะ (เซิร์ฟเวอร์ส่งจำนวนที่สั่งมาใน orders) แสดงแถวเลื่อนแนวนอนก่อนรายการ Lot
-  var POPULAR_MIN = 3, POPULAR_MAX = 10;
+  var POPULAR_MIN = 3, POPULAR_MAX = 10, POPULAR_SHOW = 2;
   function popularHtml() {
-    var list = S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && (!S.catAll || (p.category || 'อื่น ๆ') === S.catAll); })
+    var all = S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && (!S.catAll || (p.category || 'อื่น ๆ') === S.catAll); })
       .sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); }).slice(0, POPULAR_MAX);
-    if (!list.length) return '';
-    return '<section class="pop" aria-label="สินค้าแนะนำ"><h2 class="pop-h">สินค้าแนะนำ<small>คนสั่งเยอะ</small></h2><div class="pop-row">' + list.map(cardHtml).join('') + '</div></section>';
+    if (!all.length) return '';
+    var shown = S.popAll ? all : all.slice(0, POPULAR_SHOW);
+    return '<section class="pop" aria-label="สินค้าแนะนำ"><h2 class="pop-h">สินค้าแนะนำ<small>คนสั่งเยอะ</small></h2><div class="pgrid">' + shown.map(cardHtml).join('') + '</div>' +
+      (all.length > POPULAR_SHOW ? '<button type="button" class="pop-more" data-act="pop-toggle">' + (S.popAll ? 'ย่อ' : 'ดูทั้งหมด (' + all.length + ')') + '</button>' : '') + '</section>';
   }
 
   function cardHtml(p) {
@@ -887,6 +889,17 @@
       sm.classList.toggle('is-stuck', !!stuck);
     });
   }
+  // แถวหัวข้อ + ปุ่มหมวดที่ตรึง: ซ่อนตอนเลื่อนลง โผล่ตอนเลื่อนขึ้น (ใกล้บนสุดแสดงเสมอ)
+  var lastScrollY = 0;
+  window.addEventListener('scroll', function () {
+    var y = window.scrollY, dy = y - lastScrollY;
+    if (y < 80) document.body.classList.remove('ttl-hide');
+    else if (dy > 6) document.body.classList.add('ttl-hide');
+    else if (dy < -6) document.body.classList.remove('ttl-hide');
+    if (Math.abs(dy) > 6 || y < 80) lastScrollY = y;
+    setTimeout(syncLotNow, 220); // รอแถวหัวข้อซ่อน/โผล่ก่อน แล้วค่อยคำนวณว่าชื่อ Lot ลอยอยู่ไหม
+  }, { passive: true });
+
   var lotNowTick = false;
   window.addEventListener('scroll', function () {
     if (lotNowTick) return;
@@ -914,7 +927,7 @@
     if (top < stick) window.scrollTo(0, top + window.scrollY - stick);
   }
 
-  function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
+  function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); lastScrollY = window.scrollY; syncLotNow(); }
 
   // ลิงก์จากข้อความแจ้งยอด (?page=my) เปิดหน้า "ออเดอร์ของฉัน" ตรงๆ; LIFF อาจห่อพารามิเตอร์ไว้ใน liff.state
   function wantsMyPage() {
@@ -1025,7 +1038,8 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
+    if (act === 'pop-toggle') { S.popAll = !S.popAll; keepScroll(); }
+    else if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
     else if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
     else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
     else if (act === 'inc') bump(t.getAttribute('data-k'), 1);

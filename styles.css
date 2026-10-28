@@ -727,3 +727,7 @@ body[data-screen="order"] .group[open] .catbar{position:sticky;top:calc(var(--hd
 .sh-head .share-btn{margin-left:8px}
 .lot-share{display:flex;justify-content:flex-end;margin:2px 0 8px}
 .share-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent-line);background:var(--paper);color:var(--accent-dark);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+
+body[data-screen="order"] .group > summary .g-title{display:flex;align-items:center;gap:8px}
+.group:not([open]) .lot-share-ic{display:none}
+.lot-share-ic{margin-left:2px;width:30px;height:30px}

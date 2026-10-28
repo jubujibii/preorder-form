@@ -191,8 +191,8 @@
   function shareBtn(act, attr, label) {
     return canShare() ? '<button type="button" class="share-btn" data-act="' + act + '" ' + attr + ' aria-label="' + label + '">' + SHARE_ICON + '</button>' : '';
   }
-  function lotShareRow(code) {
-    return canShare() ? '<div class="lot-share"><button type="button" class="share-pill" data-act="share-lot" data-code="' + esc(code) + '">' + SHARE_ICON + 'แชร์ Lot นี้</button></div>' : '';
+  function lotShareIcon(code) {
+    return canShare() ? '<button type="button" class="share-btn lot-share-ic" data-act="share-lot" data-code="' + esc(code) + '" aria-label="แชร์ Lot นี้">' + SHARE_ICON + '</button>' : '';
   }
   function shareLink(q) { return 'https://liff.line.me/' + CFG.LIFF_ID + '?' + q; }
   // ข้อความเร่งปิดรับ: เหลือน้อยกว่า 48 ชม. เท่านั้น
@@ -203,10 +203,9 @@
   }
   function flexText(text, o) { var t = { type: 'text', text: text, wrap: true }; for (var k in o) t[k] = o[k]; return t; }
   function sharePick(messages, okMsg) {
-    var ok = false;
-    try { ok = !!(L.isApiAvailable && L.isApiAvailable('shareTargetPicker')); } catch (_) {}
-    if (!ok) { toast('แชร์ยังใช้ไม่ได้ในแอป LINE รุ่นนี้ (ลองอัปเดต LINE)'); return; }
-    L.shareTargetPicker(messages).then(function (r) { if (r && r.status === 'success') toast(okMsg); }).catch(function (e) { toast('แชร์ไม่สำเร็จ' + (e && e.message ? ' (' + String(e.message).slice(0, 40) + ')' : '')); });
+    var avail = '?';
+    try { avail = L.isApiAvailable ? String(L.isApiAvailable('shareTargetPicker')) : 'n/a'; } catch (_) {}
+    L.shareTargetPicker(messages).then(function (r) { if (r && r.status === 'success') toast(okMsg); }).catch(function (e) { toast('แชร์ไม่สำเร็จ [' + avail + '] ' + (e && (e.code || e.message) ? String(e.code || '') + ' ' + String(e.message || '').slice(0, 60) : '')); });
   }
   function shareProduct(pid) {
     var p = productsById().get(pid);
@@ -389,8 +388,8 @@
         return d || String(a.code).localeCompare(String(b.code), 'th', { numeric: true });
       });
       groups.forEach(function (g) {
-        html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + '</span>' +
-          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' + lotShareRow(g.code) + catBar(g) + '<div class="pgrid">';
+        html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + lotShareIcon(g.code) + '</span>' +
+          '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary>' +  catBar(g) + '<div class="pgrid">';
         g.items.forEach(function (p) {
           if (S.cat[g.code] && (p.category || 'อื่น ๆ') !== S.cat[g.code]) return;
           html += cardHtml(p);

@@ -130,6 +130,9 @@
     var fn = SCREENS[S.screen] || SCREENS.error;
     app.innerHTML = fn();
     if (S.screen === 'order' || S.screen === 'my') app.insertAdjacentHTML('beforeend', tabbarHtml(S.screen));
+    document.body.classList.remove('st-on');
+    var hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr-h', hd.offsetHeight + 'px');
+    if (S.screen === 'order') { var sm = app.querySelector('.group > summary'); if (sm) document.documentElement.style.setProperty('--sum-h', sm.offsetHeight + 'px'); }
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
     if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }
@@ -152,6 +155,10 @@
     if (!p || !p.count) return '';
     return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><strong>มียอดค้างชำระ ' + baht(p.totalSatang) + '</strong><span>' + p.count + ' รายการ · โอนแล้วแนบสลิปได้ในหน้าออเดอร์ของฉัน</span></div>' +
       '<button type="button" class="btn pb-btn" data-act="my">ดูและชำระ</button></div></div>';
+  }
+  var REFRESH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>';
+  function refreshBtn(act, busy) {
+    return '<button type="button" class="refresh ic' + (busy ? ' spin' : '') + '" data-act="' + act + '" aria-label="รีเฟรช"' + (busy ? ' disabled' : '') + '>' + REFRESH_ICON + '</button>';
   }
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
@@ -306,7 +313,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
+      var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions">' + refreshBtn('refresh', S.refreshing) + '</div></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -366,11 +373,15 @@
       }
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;
-      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
+      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong>' + refreshBtn('refresh-my', S.refreshingMy) + '<button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
         '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
         (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
           return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (k === 'refund' && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button>';
-        }).join('') + '</div>' : '') + '</section>';
+        }).join('') + '</div>' : '') + '</section>' +
+        '<nav class="stickytabs" role="tablist" aria-label="หมวดออเดอร์">' + ['pay', 'new', 'ship', 'inbound'].concat(MORE_TAB_KEYS).map(function (k) {
+          var n = k === 'refund' ? refundPending : counts[k];
+          return '<button type="button" role="tab" class="st' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (n ? '<span class="st-n">' + n + '</span>' : '') + '</button>';
+        }).join('') + '</nav>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
       var STAGE_ORDER = ['pay', 'verify', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'];
       var payState = paymentStateByPreorder(d.billing);
@@ -379,10 +390,15 @@
         return (live && payState[o.preorderCode]) || lineTab(o, d.billing);
       }
       // ป้ายสถานะบนหัวการ์ด Lot (แท็บทั้งหมด): เรียง "ต้องทำ" ก่อน จบแล้วท้ายสุด แสดงไม่แสดงจำนวน
-      function stageTags(list) {
+      function stageTags(list, code) {
         var n = {};
         list.forEach(function (o) { n[stageOf(o)] = true; });
-        return '<span class="g-tags">' + STAGE_ORDER.filter(function (k) { return n[k]; }).map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + '</span>'; }).join('') + '</span>';
+        var keys = STAGE_ORDER.filter(function (k) { return n[k]; });
+        var open = !!(S.tagsOpen && S.tagsOpen[code]);
+        var shownKeys = keys.length > 2 && !open ? keys.slice(0, 2) : keys;
+        var chips = shownKeys.map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + '</span>'; }).join('');
+        if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 2)) + '</button>';
+        return '<span class="g-tags">' + chips + '</span>';
       }
       function renderGroups(list) {
         var html = '';
@@ -393,7 +409,7 @@
         var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
         var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span>' + (S.myTab === 'all' ? stageTags(mine) : '') + '</summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -603,13 +619,14 @@
   }
 
   function showMy() {
-    S.my = null; S.myTab = ''; S.myMore = false;
+    var cached = S.my; // มีข้อมูลเดิมอยู่แล้วให้แสดงทันที แล้วโหลดใหม่เงียบ ๆ ข้างหลัง
+    S.my = cached || null; S.myTab = ''; S.myMore = false;
     if (linkTab && ORDER_TABS.some(function (t) { return t.key === linkTab; })) { S.myTab = linkTab; S.myMore = MORE_TAB_KEYS.indexOf(linkTab) >= 0; }
     linkTab = ''; S.edit = null; S.confirmCancel = ''; setScreen('my');
     api('myOrders').then(function (res) {
       if (!res.ok) throw new Error('server:' + (res.error || 'unknown'));
-      S.my = res; render();
-    }).catch(function (e) { S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง (รหัส: ' + String((e && e.message) || e || 'unknown').slice(0, 80) + ')'; S.my = { orders: [], billing: [] }; try { render(); } catch (e2) { /* ไม่ให้ error ซ้อน */ } });
+      S.my = res; var y = window.scrollY; render(); if (cached) window.scrollTo(0, y);
+    }).catch(function (e) { if (cached) return; S.error = 'โหลดออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง (รหัส: ' + String((e && e.message) || e || 'unknown').slice(0, 80) + ')'; S.my = { orders: [], billing: [] }; try { render(); } catch (e2) { /* ไม่ให้ error ซ้อน */ } });
   }
 
   function cancelLine(k) {
@@ -705,6 +722,15 @@
     if (t && t.matches && t.matches('input[data-slip]') && t.files && t.files[0]) sendSlip(t.getAttribute('data-slip'), t.files[0]);
   });
 
+  // แถบหมวดออเดอร์แบบลอย: โผล่เมื่อเลื่อนผ่านกล่อง "การซื้อของฉัน" ไปแล้ว
+  function syncStickyTabs() {
+    var mb = S.screen === 'my' ? document.querySelector('.mybuy') : null;
+    document.body.classList.toggle('st-on', !!mb && mb.getBoundingClientRect().bottom < 0);
+    var a = document.querySelector('.stickytabs .st.active');
+    if (a && document.body.classList.contains('st-on')) { var bar = a.parentNode; bar.scrollLeft = a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2; }
+  }
+  window.addEventListener('scroll', syncStickyTabs, { passive: true });
+
   function keepScroll() { var y = window.scrollY; render(); window.scrollTo(0, y); }
 
   // ลิงก์จากข้อความแจ้งยอด (?page=my) เปิดหน้า "ออเดอร์ของฉัน" ตรงๆ; LIFF อาจห่อพารามิเตอร์ไว้ใน liff.state
@@ -732,6 +758,39 @@
   function recheckFriend() {
     return L.getFriendship().then(function (f) { S.friend = !!f.friendFlag; S.friendUnknown = false; }, function () { S.friend = true; S.friendUnknown = true; });
   }
+
+  function refreshMy() {
+    if (S.refreshingMy) return;
+    S.refreshingMy = true; S.error = ''; render();
+    api('myOrders').then(function (m) { if (m.ok) { S.my = m; toast('อัปเดตแล้ว ✓'); } else throw new Error('x'); })
+      .catch(function () { S.error = 'รีเฟรชไม่สำเร็จ ลองใหม่อีกครั้ง'; })
+      .then(function () { S.refreshingMy = false; var y = window.scrollY; render(); window.scrollTo(0, y); });
+  }
+
+  // ดึงหน้าจอลงเพื่อรีเฟรช (เฉพาะตอนอยู่บนสุดของหน้าสั่งของ/ออเดอร์ของฉัน)
+  (function () {
+    var y0 = null, dy = 0, ind = null;
+    function reset() { y0 = null; dy = 0; if (ind) { ind.style.transform = 'translate(-50%,-60px)'; ind.style.opacity = '0'; } }
+    document.addEventListener('touchstart', function (e) {
+      if ((S.screen !== 'order' && S.screen !== 'my') || S.sheet || window.scrollY > 0 || e.touches.length !== 1) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0 || window.scrollY > 0) { dy = 0; return; }
+      if (!ind) { ind = document.createElement('div'); ind.className = 'ptr'; ind.innerHTML = REFRESH_ICON; document.body.appendChild(ind); }
+      var p = Math.min(dy, 110) / 2;
+      ind.style.opacity = String(Math.min(1, dy / 70));
+      ind.style.transform = 'translate(-50%,' + (p - 40) + 'px) rotate(' + (dy * 3) + 'deg)';
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      var go = y0 !== null && dy > 70;
+      reset();
+      if (go) { if (S.screen === 'my') refreshMy(); else refreshProducts(); }
+    }, { passive: true });
+    document.addEventListener('touchcancel', reset, { passive: true });
+  })();
 
   function refreshProducts() {
     if (S.refreshing) return;
@@ -783,18 +842,20 @@
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
+    if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
+    else if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
     else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
     else if (act === 'inc') bump(t.getAttribute('data-k'), 1);
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'submit') submitOrder();
     else if (act === 'more') goOrder();
     else if (act === 'refresh') refreshProducts();
+    else if (act === 'refresh-my') refreshMy();
     else if (act === 'copy-acct') { var pi = (S.my && S.my.paymentInfo) || ''; var m = pi.match(/\d[\d\- ]{6,}\d/); copyText(m ? m[0].replace(/[\s-]/g, '') : pi, m ? 'คัดลอกเลขบัญชีแล้ว ✓' : 'คัดลอกข้อมูลชำระเงินแล้ว ✓'); }
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
     else if (act === 'cat') { S.cat[t.getAttribute('data-code')] = t.getAttribute('data-cat') || ''; keepScroll(); }
-    else if (act === 'tab') { S.myTab = t.getAttribute('data-tab'); if (MORE_TAB_KEYS.indexOf(S.myTab) >= 0) S.myMore = true; S.edit = null; S.confirmCancel = ''; render(); }
+    else if (act === 'tab') { var fromBar = !!t.closest('.stickytabs') && document.body.classList.contains('st-on'); S.myTab = t.getAttribute('data-tab'); if (MORE_TAB_KEYS.indexOf(S.myTab) >= 0) S.myMore = true; S.edit = null; S.confirmCancel = ''; render(); if (fromBar) { var mb = document.querySelector('.mybuy'); if (mb) window.scrollTo(0, mb.getBoundingClientRect().bottom + window.scrollY - 46); } syncStickyTabs(); }
     else if (act === 'edit-open') { S.confirmCancel = ''; S.edit = { k: t.getAttribute('data-k'), qty: Number(t.getAttribute('data-qty')) }; keepScroll(); }
     else if (act === 'edit-dec') { S.edit.qty = Math.max(1, S.edit.qty - 1); keepScroll(); }
     else if (act === 'edit-inc') { S.edit.qty += 1; keepScroll(); }

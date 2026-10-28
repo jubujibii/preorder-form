@@ -651,3 +651,18 @@ button, [data-act], .pcard, .tabbar, .stepper, summary { -webkit-user-select: no
 .sheet .sh-head { margin-top: 10px; }
 .sh-top .sh-head { margin-top: 10px; padding-bottom: 2px; }
 .sheet .sh-meta { margin-top: 2px; }
+
+/* ไทล์แท็บที่เลือกอยู่ในออเดอร์ของฉันต้องเห็นชัด: กฎ .mybuy .tile:not(.tile-pay) เดิมบังคับพื้นขาวไม่มีกรอบ ทับสไตล์ active */
+.mybuy .tile:not(.tile-pay).active { background: var(--accent-tint); box-shadow: 0 0 0 2px var(--accent), 0 4px 10px rgba(120, 70, 30, .10); }
+.mybuy .tile:not(.tile-pay).active .tile-ico { color: var(--accent-dark); }
+.mybuy .tile:not(.tile-pay).active .tile-label { color: var(--accent-dark); font-weight: 700; }
+.mybuy .tile.tile-pay.active { border-color: var(--accent-dark); box-shadow: 0 0 0 3px var(--accent-ring); }
+.mybuy .tile.tile-pay.active .tile-label { color: var(--accent-dark); }
+
+/* ชื่อสินค้ากับป้ายตัวเลือกในแถวรายการเดี่ยว: ให้ข้อความกินพื้นที่ที่เหลือและตัดบรรทัดตามปกติ ไม่ถูกบีบเป็นแถบแคบ */
+.my-line .line-name .ln-txt { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.my-line .line-name .ln-txt .opt-tag { margin-left: 6px; white-space: normal; }
+
+/* กล่องคืนเงิน: มาสคอตถูกซ่อนไว้แล้ว จึงเอาที่ว่างด้านบนและหัวใจที่ลอยอยู่ออกด้วย */
+.refundbox { margin-top: 0; }
+.refundbox::before { display: none; }

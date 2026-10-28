@@ -449,7 +449,7 @@
           var unit = o.priceThb != null ? o.priceThb : null;
           var badgeTxt = S.myTab !== 'all' ? '' : '<span class="badge stage s-' + stageOf(o) + '">' + esc(o.status === 'รับออเดอร์' ? labelOf[stageOf(o)] : o.status) + '</span>';
           html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
-            '<div class="line-name' + (!multi && (o.optionImageUrl || o.imageUrl) ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? (o.optionImageUrl ? '<img class="pimg opt-img" src="' + esc(o.optionImageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '')) + '</div>' +
+            '<div class="line-name' + (!multi && (o.optionImageUrl || o.imageUrl) ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? (o.optionImageUrl ? '<img class="pimg opt-img" src="' + esc(o.optionImageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : '<span class="ln-txt">' + esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '') + '</span>') + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
             '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
@@ -533,6 +533,15 @@
       });
     }
     refreshTotal();
+  }
+
+  // ไปหน้าสั่งสินค้าทันทีด้วยรายการที่มีอยู่ แล้วค่อยโหลดรายการใหม่เงียบ ๆ ด้านหลัง (ไม่ให้ค้างอยู่หน้าเดิมระหว่างรอเครือข่าย)
+  function goOrder() {
+    setScreen('order'); refreshTotal();
+    loadBootstrap().then(function () {
+      if (S.screen !== 'order') return;
+      var y = window.scrollY; render(); window.scrollTo(0, y); refreshTotal();
+    }).catch(function () {});
   }
 
   function loadBootstrap() {
@@ -764,7 +773,7 @@
     else if (act === 'inc') bump(t.getAttribute('data-k'), 1);
     else if (act === 'dec') bump(t.getAttribute('data-k'), -1);
     else if (act === 'submit') submitOrder();
-    else if (act === 'more') loadBootstrap().catch(function () {}).then(function () { setScreen('order'); refreshTotal(); });
+    else if (act === 'more') goOrder();
     else if (act === 'refresh') refreshProducts();
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }

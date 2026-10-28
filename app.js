@@ -134,7 +134,10 @@
     if (S.screen === 'order' || S.screen === 'my') app.insertAdjacentHTML('beforeend', tabbarHtml(S.screen));
     document.body.classList.remove('st-on');
     var hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr-h', hd.offsetHeight + 'px');
-    if (S.screen === 'order') { var sm = app.querySelector('.group > summary'); if (sm) document.documentElement.style.setProperty('--sum-h', sm.offsetHeight + 'px'); }
+    if (S.screen === 'order') {
+      var sm = app.querySelector('.group > summary'); if (sm) document.documentElement.style.setProperty('--sum-h', sm.offsetHeight + 'px');
+      var tt = app.querySelector('.titlerow-order'); document.documentElement.style.setProperty('--ttl-h', (tt ? tt.offsetHeight : 0) + 'px');
+    }
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
     if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }

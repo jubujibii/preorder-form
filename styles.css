@@ -757,3 +757,9 @@ body[data-screen="order"] .group > summary .g-title{display:flex;align-items:cen
 .cat-btn .cb-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cat-btn i{flex:none}
 .titlerow-order .refresh.ic{flex:none}
+
+/* หัวข้อ + ปุ่มหมวด/รีเฟรช ตรึงใต้หัวเว็บตอนเลื่อน; ชื่อ Lot ตรึงต่อจากนั้น */
+body[data-screen="order"] .titlerow-order{position:sticky;top:var(--hdr-h,59px);z-index:35;background:var(--bg);margin:0 -16px 6px;padding:8px 16px}
+body[data-screen="order"] .group[open] > summary{top:calc(var(--hdr-h,59px) + var(--ttl-h,0px))}
+.titlerow-order .refresh.ic{width:28px;height:28px}
+.titlerow-order .refresh.ic svg{width:15px;height:15px}

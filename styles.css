@@ -773,3 +773,7 @@ body[data-screen="order"] .group[open] > summary{position:static;border-bottom:0
 #lot-now[hidden]{display:none}
 #lot-now .ln-chip{background:var(--accent-soft,#FBE3D6);color:var(--accent-dark);border-radius:999px;padding:3px 12px;font-weight:700;font-size:14px;white-space:nowrap;flex:none}
 #lot-now .ln-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* พื้นหลังแถวที่ตรึง: สีครีมโปร่ง + เบลอ ไม่มีเส้น; ซ่อนตอนเลื่อนลง */
+body[data-screen="order"] .titlerow-order,#lot-now{background:rgba(249,244,234,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:0;box-shadow:none;transition:opacity .18s ease}
+body.ttl-hide[data-screen="order"] .titlerow-order,body.ttl-hide #lot-now{opacity:0;pointer-events:none}

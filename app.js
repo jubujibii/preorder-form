@@ -883,6 +883,16 @@
     el.style.top = line + 'px';
     el.hidden = false;
   }
+  // แถวหัวข้อ/ป้าย Lot ที่ตรึง: ซ่อนตอนเลื่อนลง โผล่ตอนเลื่อนขึ้น (ใกล้บนสุดแสดงเสมอ)
+  var lastScrollY = 0;
+  window.addEventListener('scroll', function () {
+    var y = window.scrollY, dy = y - lastScrollY;
+    if (y < 80) document.body.classList.remove('ttl-hide');
+    else if (dy > 6) document.body.classList.add('ttl-hide');
+    else if (dy < -6) document.body.classList.remove('ttl-hide');
+    if (Math.abs(dy) > 6 || y < 80) lastScrollY = y;
+  }, { passive: true });
+
   var lotNowTick = false;
   window.addEventListener('scroll', function () {
     if (lotNowTick) return;

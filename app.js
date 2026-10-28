@@ -307,7 +307,6 @@
         g.items.push(p);
       });
       var html = payBanner() + '<div class="titlerow"><h1>สั่งพรีออเดอร์</h1><div class="title-actions"><button type="button" class="refresh" data-act="refresh"' + (S.refreshing ? ' disabled' : '') + '>' + (S.refreshing ? 'กำลังโหลด…' : '↻ รีเฟรช') + '</button></div></div>' +
-        '<div class="linkrow"><button type="button" class="btn" data-act="copy-link">คัดลอกลิงก์สั่งของ</button><button type="button" class="btn" data-act="open-ext">เปิดนอกแอป</button></div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -637,7 +636,6 @@
     });
   }
 
-  var ORDER_URL = 'https://liff.line.me/' + CFG.LIFF_ID;
   function copyText(txt, msg) {
     function ok() { toast(msg); }
     function fallback() {
@@ -792,9 +790,7 @@
     else if (act === 'submit') submitOrder();
     else if (act === 'more') goOrder();
     else if (act === 'refresh') refreshProducts();
-    else if (act === 'copy-link') copyText(ORDER_URL, 'คัดลอกลิงก์แล้ว ✓');
     else if (act === 'copy-acct') { var pi = (S.my && S.my.paymentInfo) || ''; var m = pi.match(/\d[\d\- ]{6,}\d/); copyText(m ? m[0].replace(/[\s-]/g, '') : pi, m ? 'คัดลอกเลขบัญชีแล้ว ✓' : 'คัดลอกข้อมูลชำระเงินแล้ว ✓'); }
-    else if (act === 'open-ext') { try { L.openWindow({ url: ORDER_URL, external: true }); } catch (_) { window.open(ORDER_URL, '_blank'); } }
     else if (act === 'more-tabs') { S.myMore = !S.myMore; keepScroll(); }
     else if (act === 'pay-detail') { var pc = t.getAttribute('data-code'); S.payDetail[pc] = !S.payDetail[pc]; keepScroll(); }
     else if (act === 'cat') { S.cat[t.getAttribute('data-code')] = t.getAttribute('data-cat') || ''; keepScroll(); }

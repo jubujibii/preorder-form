@@ -186,7 +186,7 @@
   // ---------- แชร์สินค้า / Lot เข้ากลุ่ม (LINE share target picker) ----------
   var SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>';
   function canShare() {
-    try { return !!(L.isInClient && L.isInClient() && L.isApiAvailable && L.isApiAvailable('shareTargetPicker')); } catch (_) { return false; }
+    try { return !!(L.isInClient && L.isInClient()); } catch (_) { return false; } // โชว์ปุ่มเมื่อเปิดใน LINE; เช็กว่าใช้แชร์ได้จริงตอนกด
   }
   function shareBtn(act, attr, label) {
     return canShare() ? '<button type="button" class="share-btn" data-act="' + act + '" ' + attr + ' aria-label="' + label + '">' + SHARE_ICON + '</button>' : '';
@@ -203,7 +203,10 @@
   }
   function flexText(text, o) { var t = { type: 'text', text: text, wrap: true }; for (var k in o) t[k] = o[k]; return t; }
   function sharePick(messages, okMsg) {
-    L.shareTargetPicker(messages).then(function (r) { if (r && r.status === 'success') toast(okMsg); }).catch(function () { toast('แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+    var ok = false;
+    try { ok = !!(L.isApiAvailable && L.isApiAvailable('shareTargetPicker')); } catch (_) {}
+    if (!ok) { toast('แชร์ยังใช้ไม่ได้ในแอป LINE รุ่นนี้ (ลองอัปเดต LINE)'); return; }
+    L.shareTargetPicker(messages).then(function (r) { if (r && r.status === 'success') toast(okMsg); }).catch(function (e) { toast('แชร์ไม่สำเร็จ' + (e && e.message ? ' (' + String(e.message).slice(0, 40) + ')' : '')); });
   }
   function shareProduct(pid) {
     var p = productsById().get(pid);

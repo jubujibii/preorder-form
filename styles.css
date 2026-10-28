@@ -763,3 +763,13 @@ body[data-screen="order"] .titlerow-order{position:sticky;top:var(--hdr-h,59px);
 body[data-screen="order"] .group[open] > summary{top:calc(var(--hdr-h,59px) + var(--ttl-h,0px))}
 .titlerow-order .refresh.ic{width:28px;height:28px}
 .titlerow-order .refresh.ic svg{width:15px;height:15px}
+/* ตอนตรึง: แถวหัวข้อเป็นแถบสีขาวต่อจากหัวเว็บ + ชื่อ Lot เป็นแถบมีขอบล่างมน */
+body[data-screen="order"] .titlerow-order{background:var(--paper);border-bottom:1px solid var(--line);box-shadow:0 2px 6px rgba(58,42,33,.06);margin:0 -16px 10px;padding:8px 16px}
+body[data-screen="order"] .group[open] > summary{border-bottom:1px solid var(--line);border-radius:0 0 16px 16px;box-shadow:-14px 0 0 var(--paper),14px 0 0 var(--paper),0 4px 8px rgba(58,42,33,.05)}
+/* ชื่อ Lot ไม่ตรึงแล้ว (ตรึงเฉพาะแถวหัวข้อ + ปุ่มหมวด) */
+body[data-screen="order"] .group[open] > summary{position:static;border-bottom:0;border-radius:0;box-shadow:none;background:transparent}
+
+#lot-now{position:fixed;left:0;right:0;max-width:480px;margin:0 auto;z-index:34;display:flex;align-items:center;gap:8px;padding:6px 16px 8px;background:var(--paper);border-bottom:1px solid var(--line);box-shadow:0 2px 6px rgba(58,42,33,.05);font-size:13px;color:var(--muted)}
+#lot-now[hidden]{display:none}
+#lot-now .ln-chip{background:var(--accent-soft,#FBE3D6);color:var(--accent-dark);border-radius:999px;padding:3px 12px;font-weight:700;font-size:14px;white-space:nowrap;flex:none}
+#lot-now .ln-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

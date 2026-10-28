@@ -138,6 +138,7 @@
       var sm = app.querySelector('.group > summary'); if (sm) document.documentElement.style.setProperty('--sum-h', sm.offsetHeight + 'px');
       var tt = app.querySelector('.titlerow-order'); document.documentElement.style.setProperty('--ttl-h', (tt ? tt.offsetHeight : 0) + 'px');
     }
+    syncLotNow();
     var at = app.querySelector('.tab.active'), tb = app.querySelector('.tabs');
     if (at && tb) tb.scrollLeft = at.offsetLeft - (tb.clientWidth - at.offsetWidth) / 2;
   }
@@ -454,7 +455,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + refreshBtn('refresh', S.refreshing) + catButton() + '</div>' +
+      var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + catButton() + '</div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       // เรียงตามเวลาปิดรับ (ปิดก่อนขึ้นก่อน) ถ้าปิดพร้อมกันเรียงตามรหัสพรี
@@ -513,7 +514,7 @@
       }
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;
-      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong>' + refreshBtn('refresh-my', S.refreshingMy) + '<button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
+      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
         '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
         (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
           return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (k === 'refund' && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button>';
@@ -862,6 +863,32 @@
     var t = ev.target;
     if (t && t.matches && t.matches('input[data-slip]') && t.files && t.files[0]) sendSlip(t.getAttribute('data-slip'), t.files[0]);
   });
+
+  // แถบ "กำลังดู Lot ไหน": โผล่ใต้แถวหัวข้อที่ตรึงไว้ เมื่อเลื่อนผ่านหัว Lot ที่กางอยู่ไปแล้ว
+  function syncLotNow() {
+    var el = document.getElementById('lot-now');
+    if (S.screen !== 'order') { if (el) el.hidden = true; return; }
+    var hd = document.querySelector('header.top'), tt = document.querySelector('.titlerow-order');
+    var line = (hd ? hd.getBoundingClientRect().bottom : 0) + (tt ? tt.offsetHeight : 0);
+    var cur = null;
+    Array.prototype.forEach.call(document.querySelectorAll('details.group[open]'), function (g) {
+      var sm = g.querySelector('summary'), r = g.getBoundingClientRect();
+      if (sm && sm.getBoundingClientRect().bottom < line && r.bottom > line + 60) cur = g;
+    });
+    if (!cur) { if (el) el.hidden = true; return; }
+    if (!el) { el = document.createElement('div'); el.id = 'lot-now'; document.body.appendChild(el); }
+    var meta = cur.querySelector('.g-meta'), n = cur.querySelectorAll('.pcard').length;
+    var metaText = meta ? meta.textContent.replace(/\s*·\s*\d+ รายการ\s*$/, '') : '';
+    el.innerHTML = '<span class="ln-chip">Lot ' + esc(cur.getAttribute('data-code')) + '</span><span class="ln-txt">' + esc(metaText) + ' · ' + n + ' รายการ</span>';
+    el.style.top = line + 'px';
+    el.hidden = false;
+  }
+  var lotNowTick = false;
+  window.addEventListener('scroll', function () {
+    if (lotNowTick) return;
+    lotNowTick = true;
+    requestAnimationFrame(function () { lotNowTick = false; syncLotNow(); });
+  }, { passive: true });
 
   // แถบหมวดออเดอร์แบบลอย: โผล่เมื่อเลื่อนผ่านกล่อง "การซื้อของฉัน" ไปแล้ว
   function syncStickyTabs() {

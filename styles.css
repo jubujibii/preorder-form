@@ -795,3 +795,29 @@ body[data-screen="order"] .group[open] > summary.is-stuck{background:var(--paper
 
 /* ชื่อ Lot ที่ตรึงต้องมีพื้นทึบเสมอ (ไม่งั้นตัวหนังสือซ้อนรูปสินค้า) ส่วนมุมมน/เงาใส่เฉพาะตอนลอยอยู่ */
 body[data-screen="order"] .group[open] > summary{background:var(--paper)}
+
+.pop-tabs{display:flex;gap:8px;margin:0 0 8px}
+.pop-tab{display:inline-flex;align-items:baseline;gap:6px;border:1px solid var(--accent-line);background:var(--paper);color:var(--muted);border-radius:999px;padding:6px 16px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.pop-tab small{font-size:12px;font-weight:500}
+.pop-tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+
+/* ปุ่มเรียงราคา */
+.sort-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--accent-line);background:var(--paper);color:var(--accent-dark);padding:0;cursor:pointer}
+.sort-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sort-btn.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.titlerow-order{flex-wrap:wrap}
+.titlerow-order .cat-btn{margin-left:auto}
+#sort-menu{position:fixed;z-index:200;background:var(--paper,#fff);border:1px solid var(--accent-line);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;min-width:190px}
+#sort-menu button{display:block;width:100%;border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+#sort-menu button.on{background:var(--accent-soft,#FBE3D6);color:var(--accent-dark);font-weight:700}
+/* ชื่อ Lot ที่ตรึง: พื้นขาวทึบ + เส้นขอบล่าง + เงา (อ่านชัดที่สุด) กดเพื่อหุบได้ */
+body[data-screen="order"] .group[open] > summary.is-stuck{background:var(--paper);border-bottom:1px solid var(--line);border-radius:0;box-shadow:-16px 0 0 var(--paper),16px 0 0 var(--paper),0 4px 10px rgba(58,42,33,.10)}
+
+/* ชื่อ Lot ไม่ตรึงที่ตัว summary แล้ว ใช้แถบลอยบรรทัดเดียว #lot-now แทน */
+body[data-screen="order"] .group[open] > summary,body[data-screen="order"] .group[open] > summary.is-stuck{position:static;background:transparent;border-bottom:0;border-radius:0;box-shadow:none;transition:none}
+#lot-now{position:fixed;left:0;right:0;max-width:480px;margin:0 auto;z-index:34;display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--paper);border-bottom:1px solid var(--line);box-shadow:0 4px 10px rgba(58,42,33,.10);cursor:pointer;transition:top .18s ease;-webkit-backdrop-filter:none;backdrop-filter:none}
+#lot-now[hidden]{display:none}
+#lot-now .ln-code{font-weight:800;font-size:16px;color:var(--ink);white-space:nowrap;flex:none}
+#lot-now .ln-txt{font-size:13px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+#lot-now .ln-x{flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg) translate(-2px,-2px);margin-right:4px}
+body.ttl-hide #lot-now{opacity:1;pointer-events:auto}

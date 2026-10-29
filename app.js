@@ -72,9 +72,9 @@
     var products = params.get('empty') === '1' ? [] : [
       { orders: 12, productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
       { orders: 7, productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
-      { orders: 5, productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
+      { isNew: true, orders: 5, productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
-      { orders: 4, productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
+      { isNew: true, orders: 4, productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     if (params.get('desc') && products[0]) products[0].description = 'ผ้านุ่มหนา ซักเครื่องได้\nขนาด 60 × 45 ซม. เหมาะกับแมวน้ำหนักไม่เกิน 6 กก.\nสีอาจต่างจากภาพเล็กน้อย';
     if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
@@ -176,11 +176,44 @@
     seen.sort(function (a, b) { return (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'th'); });
     return { list: seen, count: n };
   }
+  var NEW_KEY = '__new';
+  function passCat(p) { return !S.catAll || (S.catAll === NEW_KEY ? !!p.isNew : (p.category || 'อื่น ๆ') === S.catAll); }
+  function catLabel() { return S.catAll === NEW_KEY ? 'เปิดใหม่' : S.catAll; }
+  // เรียงตามราคา: S.sort = '' (ตามเดิม) | 'asc' น้อยไปมาก | 'desc' มากไปน้อย
+  var SORT_LABELS = { '': 'ค่าเริ่มต้น', asc: 'ราคา: น้อย → มาก', desc: 'ราคา: มาก → น้อย' };
+  function sortItems(list) {
+    if (!S.sort) return list;
+    var dir = S.sort === 'asc' ? 1 : -1;
+    return list.slice().sort(function (a, b) { return dir * ((a.priceThb || 0) - (b.priceThb || 0)); });
+  }
+  var SORT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5"/></svg>';
+  function sortButton() {
+    return '<button type="button" class="sort-btn' + (S.sort ? ' on' : '') + '" data-act="sort-menu" aria-haspopup="true" aria-label="เรียงตามราคา">' + SORT_ICON + '</button>';
+  }
+  function openSortMenu(btn) {
+    var had = document.getElementById('sort-menu');
+    if (had) { had.remove(); return; }
+    var m = document.createElement('div');
+    m.id = 'sort-menu';
+    m.innerHTML = Object.keys(SORT_LABELS).map(function (k) { return '<button type="button" class="' + ((S.sort || '') === k ? 'on' : '') + '" data-act="sort-pick" data-sort="' + k + '">' + SORT_LABELS[k] + '</button>'; }).join('');
+    document.body.appendChild(m);
+    var r = btn.getBoundingClientRect();
+    m.style.top = (r.bottom + 6) + 'px';
+    m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act="sort-menu"], #sort-menu [data-act="sort-pick"]'), m = document.getElementById('sort-menu');
+    if (t && t.getAttribute('data-act') === 'sort-menu') { ev.preventDefault(); openSortMenu(t); return; }
+    if (t) { S.sort = t.getAttribute('data-sort') || ''; if (m) m.remove(); render(); window.scrollTo(0, 0); refreshTotal(); return; }
+    if (m) m.remove();
+  });
+
   function catButton() {
     var ac = allCategories();
     if (ac.list.length < 2) return '';
-    if (S.catAll && ac.list.indexOf(S.catAll) < 0) S.catAll = '';
-    return '<button type="button" class="cat-btn' + (S.catAll ? ' on' : '') + '" data-act="cat-menu" aria-haspopup="true"><span class="cb-t">' + esc(S.catAll || 'ทั้งหมด') + '</span><i>▾</i></button>';
+    var hasNew = S.products.some(function (p) { return p.isNew; });
+    if (S.catAll === NEW_KEY ? !hasNew : (S.catAll && ac.list.indexOf(S.catAll) < 0)) S.catAll = '';
+    return '<button type="button" class="cat-btn' + (S.catAll ? ' on' : '') + '" data-act="cat-menu" aria-haspopup="true"><span class="cb-t">' + esc(catLabel() || 'ทั้งหมด') + '</span><i>▾</i></button>';
   }
   function openCatMenu(btn) {
     var had = document.getElementById('cat-menu');
@@ -189,7 +222,8 @@
     var m = document.createElement('div');
     m.id = 'cat-menu';
     function item(val, label, n) { return '<button type="button" class="' + ((S.catAll || '') === val ? 'on' : '') + '" data-act="cat-pick" data-cat="' + esc(val) + '">' + esc(label) + '<small>' + n + '</small></button>'; }
-    m.innerHTML = item('', 'ทั้งหมด', total) + ac.list.map(function (c) { return item(c, c, ac.count[c]); }).join('');
+    var newN = S.products.filter(function (p) { return p.isNew; }).length;
+    m.innerHTML = item('', 'ทั้งหมด', total) + (newN ? item(NEW_KEY, 'เปิดใหม่', newN) : '') + ac.list.map(function (c) { return item(c, c, ac.count[c]); }).join('');
     document.body.appendChild(m);
     var r = btn.getBoundingClientRect();
     m.style.top = (r.bottom + 6) + 'px';
@@ -198,7 +232,7 @@
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act="cat-menu"], #cat-menu [data-act="cat-pick"]'), m = document.getElementById('cat-menu');
     if (t && t.getAttribute('data-act') === 'cat-menu') { ev.preventDefault(); openCatMenu(t); return; }
-    if (t) { S.catAll = t.getAttribute('data-cat') || ''; if (S.catAll) S.products.forEach(function (p) { if ((p.category || 'อื่น ๆ') === S.catAll) S.open[p.preorderCode] = true; }); if (m) m.remove(); render(); window.scrollTo(0, 0); refreshTotal(); return; }
+    if (t) { S.catAll = t.getAttribute('data-cat') || ''; if (S.catAll) S.products.forEach(function (p) { if (passCat(p)) S.open[p.preorderCode] = true; }); if (m) m.remove(); render(); window.scrollTo(0, 0); refreshTotal(); return; }
     if (m) m.remove();
   });
 
@@ -352,12 +386,19 @@
   // สินค้าแนะนำ: รายการที่มีคนสั่งเยอะ (เซิร์ฟเวอร์ส่งจำนวนที่สั่งมาใน orders) แสดงแถวเลื่อนแนวนอนก่อนรายการ Lot
   var POPULAR_MIN = 3, POPULAR_MAX = 10, POPULAR_SHOW = 2;
   function popularHtml() {
-    var all = S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && (!S.catAll || (p.category || 'อื่น ๆ') === S.catAll); })
-      .sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); }).slice(0, POPULAR_MAX);
-    if (!all.length) return '';
-    var shown = S.popAll ? all : all.slice(0, POPULAR_SHOW);
-    return '<section class="pop" aria-label="สินค้าแนะนำ"><h2 class="pop-h">สินค้าแนะนำ<small>คนสั่งเยอะ</small></h2><div class="pgrid">' + shown.map(cardHtml).join('') + '</div>' +
-      (all.length > POPULAR_SHOW ? '<button type="button" class="pop-more" data-act="pop-toggle">' + (S.popAll ? 'ย่อ' : 'ดูทั้งหมด (' + all.length + ')') + '</button>' : '') + '</section>';
+    var hot = sortItems(S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && passCat(p); })
+      .sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); }).slice(0, POPULAR_MAX));
+    var fresh = sortItems(S.products.filter(function (p) { return p.isNew && passCat(p); }).slice(0, POPULAR_MAX));
+    if (!hot.length && !fresh.length) return '';
+    var tab = S.popTab === 'new' ? 'new' : 'hot';
+    if (tab === 'new' && !fresh.length) tab = 'hot';
+    if (tab === 'hot' && !hot.length) tab = 'new';
+    var list = tab === 'new' ? fresh : hot, shown = S.popAll ? list : list.slice(0, POPULAR_SHOW);
+    function tabBtn(k, label, n) { return '<button type="button" class="pop-tab' + (tab === k ? ' on' : '') + '" data-act="pop-tab" data-tab="' + k + '">' + label + '<small>' + n + '</small></button>'; }
+    var head = (hot.length && fresh.length) ? '<div class="pop-tabs">' + tabBtn('hot', 'ขายดี', hot.length) + tabBtn('new', 'เปิดใหม่', fresh.length) + '</div>'
+      : '<h2 class="pop-h">' + (tab === 'new' ? 'เปิดใหม่' : 'สินค้าแนะนำ<small>คนสั่งเยอะ</small>') + '</h2>';
+    return '<section class="pop" aria-label="สินค้าแนะนำ">' + head + '<div class="pgrid">' + shown.map(cardHtml).join('') + '</div>' +
+      (list.length > POPULAR_SHOW ? '<button type="button" class="pop-more" data-act="pop-toggle">' + (S.popAll ? 'ย่อ' : 'ดูทั้งหมด (' + list.length + ')') + '</button>' : '') + '</section>';
   }
 
   function cardHtml(p) {
@@ -467,7 +508,7 @@
         if (!g) { g = { code: p.preorderCode, closeAt: p.closeAt, items: [] }; groups.push(g); }
         g.items.push(p);
       });
-      var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + catButton() + '</div>' +
+      var html = payBanner() + '<div class="titlerow titlerow-order"><h1>สั่งพรีออเดอร์</h1>' + catButton() + sortButton() + '</div>' +
         (S.notice ? '<p class="notice" role="status">' + esc(S.notice) + '</p>' : '') +
         '<p class="price-note" role="note">ยอดที่แสดงเป็น <b>ค่าสินค้าเท่านั้น</b> <span style="white-space:nowrap">ยังไม่รวมค่าส่ง</span><span style="white-space:nowrap">และค่านำเข้า</span></p>' + errBanner();
       html += popularHtml();
@@ -477,7 +518,7 @@
         return d || String(a.code).localeCompare(String(b.code), 'th', { numeric: true });
       });
       groups.forEach(function (g) {
-        var items = g.items.filter(function (p) { return !S.catAll || (p.category || 'อื่น ๆ') === S.catAll; });
+        var items = sortItems(g.items.filter(passCat));
         if (!items.length) return; // เลือกหมวดแล้ว Lot ที่ไม่มีสินค้าหมวดนั้นซ่อนไป
         html += '<details class="group" data-code="' + esc(g.code) + '"' + (S.open[g.code] ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(g.code) + lotShareIcon(g.code) + '</span>' +
           '<span class="g-meta">ปิดรับ ' + esc(closeText(g.closeAt)) + (S.catAll ? ' · ' + items.length + ' รายการ' : '') + '</span>' + closeBadge(g.closeAt) + '<span class="g-cnt" data-cnt="' + esc(g.code) + '"></span></summary><div class="pgrid">';
@@ -877,19 +918,51 @@
     if (t && t.matches && t.matches('input[data-slip]') && t.files && t.files[0]) sendSlip(t.getAttribute('data-slip'), t.files[0]);
   });
 
-  // ชื่อ Lot ที่กางอยู่ตรึงใต้หัวเว็บตอนเลื่อน: ใส่คลาส is-stuck เมื่อกำลังลอยอยู่ (เพื่อทำมุมล่างมน/เงา)
+  // แถบชื่อ Lot ตอนเลื่อน (บรรทัดเดียว ลอยเต็มความกว้าง): โผล่ใต้หัวเว็บ/แถวหัวข้อ เมื่อเลื่อนผ่านหัว Lot ที่กางอยู่ไปแล้ว กดเพื่อหุบ Lot นั้น
+  function shortClose(txt) { return String(txt).replace(/\s*\d{1,2}:\d{2}.*$/, '').replace(/\s*25\d\d/, ''); }
   function syncLotNow() {
-    var old = document.getElementById('lot-now'); if (old) old.remove();
-    if (S.screen !== 'order') return;
+    var el = document.getElementById('lot-now');
+    if (S.screen !== 'order') { if (el) el.hidden = true; return; }
     var hd = document.querySelector('header.top'), tt = document.querySelector('.titlerow-order');
     var hidden = document.body.classList.contains('ttl-hide');
     var line = (hd ? hd.getBoundingClientRect().bottom : 0) + (hidden || !tt ? 0 : tt.offsetHeight);
-    Array.prototype.forEach.call(document.querySelectorAll('details.group > summary'), function (sm) {
-      var g = sm.parentNode, stuck = g.open && sm.getBoundingClientRect().top <= line + 1 && g.getBoundingClientRect().bottom > line + sm.offsetHeight;
-      sm.classList.toggle('is-stuck', !!stuck);
+    var cur = null;
+    Array.prototype.forEach.call(document.querySelectorAll('details.group[open]'), function (g) {
+      var sm = g.querySelector('summary'), r = g.getBoundingClientRect();
+      if (sm && sm.getBoundingClientRect().bottom < line && r.bottom > line + 50) cur = g;
     });
+    if (!cur) { if (el) el.hidden = true; return; }
+    if (!el) { el = document.createElement('div'); el.id = 'lot-now'; el.setAttribute('role', 'button'); document.body.appendChild(el); }
+    var meta = cur.querySelector('.g-meta');
+    var metaText = meta ? meta.textContent.replace(/\s*·\s*\d+ รายการ\s*$/, '') : '';
+    el.setAttribute('data-code', cur.getAttribute('data-code'));
+    el.innerHTML = '<span class="ln-code">Lot ' + esc(cur.getAttribute('data-code')) + '</span><span class="ln-txt">' + esc(shortClose(metaText)) + '</span><span class="ln-x" aria-hidden="true"></span>';
+    el.style.top = line + 'px';
+    el.hidden = false;
   }
-  // แถวหัวข้อ + ปุ่มหมวดที่ตรึง: ซ่อนตอนเลื่อนลง โผล่ตอนเลื่อนขึ้น (ใกล้บนสุดแสดงเสมอ)
+  // กดแถบชื่อ Lot = หุบ Lot นั้น แล้วเลื่อนไปที่หัว Lot ให้เห็นว่าหุบแล้ว
+  document.addEventListener('click', function (ev) {
+    var bar = ev.target.closest && ev.target.closest('#lot-now');
+    if (!bar) return;
+    var code = bar.getAttribute('data-code');
+    var g = Array.prototype.filter.call(document.querySelectorAll('details.group'), function (x) { return x.getAttribute('data-code') === code; })[0];
+    if (!g) return;
+    g.open = false; S.open[code] = false;
+    var hd = document.querySelector('header.top'), tt = document.querySelector('.titlerow-order');
+    var line = (hd ? hd.getBoundingClientRect().bottom : 0) + (document.body.classList.contains('ttl-hide') || !tt ? 0 : tt.offsetHeight);
+    window.scrollTo(0, g.getBoundingClientRect().top + window.scrollY - line - 8);
+    lastScrollY = window.scrollY;
+    syncLotNow();
+  });
+
+  var lotNowTick = false;
+  window.addEventListener('scroll', function () {
+    if (lotNowTick) return;
+    lotNowTick = true;
+    requestAnimationFrame(function () { lotNowTick = false; syncLotNow(); });
+  }, { passive: true });
+
+  // แถวหัวข้อ + ปุ่มหมวด/เรียง: ซ่อนตอนเลื่อนลง โผล่ตอนเลื่อนขึ้น (ใกล้บนสุดแสดงเสมอ)
   var lastScrollY = 0;
   window.addEventListener('scroll', function () {
     var y = window.scrollY, dy = y - lastScrollY;
@@ -897,14 +970,7 @@
     else if (dy > 6) document.body.classList.add('ttl-hide');
     else if (dy < -6) document.body.classList.remove('ttl-hide');
     if (Math.abs(dy) > 6 || y < 80) lastScrollY = y;
-    setTimeout(syncLotNow, 220); // รอแถวหัวข้อซ่อน/โผล่ก่อน แล้วค่อยคำนวณว่าชื่อ Lot ลอยอยู่ไหม
-  }, { passive: true });
-
-  var lotNowTick = false;
-  window.addEventListener('scroll', function () {
-    if (lotNowTick) return;
-    lotNowTick = true;
-    requestAnimationFrame(function () { lotNowTick = false; syncLotNow(); });
+    setTimeout(syncLotNow, 220); // รอแถวหัวข้อซ่อน/โผล่ก่อน แล้วค่อยย้ายแถบชื่อ Lot ตาม
   }, { passive: true });
 
   // แถบหมวดออเดอร์แบบลอย: โผล่เมื่อเลื่อนผ่านกล่อง "การซื้อของฉัน" ไปแล้ว
@@ -1039,6 +1105,7 @@
     if (!t) return;
     var act = t.getAttribute('data-act');
     if (act === 'pop-toggle') { S.popAll = !S.popAll; keepScroll(); }
+    else if (act === 'pop-tab') { S.popTab = t.getAttribute('data-tab'); S.popAll = false; keepScroll(); }
     else if (act === 'tags') { ev.preventDefault(); var tc = t.getAttribute('data-code'); S.tagsOpen = S.tagsOpen || {}; S.tagsOpen[tc] = !S.tagsOpen[tc]; keepScroll(); }
     else if (act === 'open-sheet') openSheet(t.getAttribute('data-p'));
     else if (act === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });

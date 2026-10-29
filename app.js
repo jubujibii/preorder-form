@@ -169,15 +169,26 @@
   var CHAT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 6h22a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-6 5v-5H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM10 13h12M10 18h7"/></svg>';
 
   // แถบกรองหมวดในแต่ละ Lot: แสดงเมื่อ Lot นั้นมีมากกว่า 1 หมวด (สินค้าที่ไม่ระบุหมวดนับเป็น "อื่น ๆ")
+  // หมวดในชีตใส่ได้หลายแท็ก คั่นด้วย , เช่น "เปิดใหม่, น้ำพุ"; แท็ก "เปิดใหม่" = ขึ้นเป็นเปิดใหม่ (ไม่นับเป็นหมวดจริง)
+  var NEW_TAG = 'เปิดใหม่';
+  function tagsOf(p) {
+    if (p._tags) return p._tags;
+    var t = String(p.category || '').split(/[,،;|/]+/).map(function (x) { return x.trim(); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+    p._manualNew = t.indexOf(NEW_TAG) >= 0;
+    t = t.filter(function (x) { return x !== NEW_TAG; });
+    p._tags = t.length ? t : ['อื่น ๆ'];
+    return p._tags;
+  }
+  function isNewP(p) { tagsOf(p); return !!(p.isNew || p._manualNew); }
   // ตัวกรองหมวดบนสุดของหน้าสั่งของ (ใช้กับทุก Lot พร้อมกัน)
   function allCategories() {
     var seen = [], n = {};
-    S.products.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); n[c] = (n[c] || 0) + 1; });
+    S.products.forEach(function (p) { tagsOf(p).forEach(function (c) { if (seen.indexOf(c) < 0) seen.push(c); n[c] = (n[c] || 0) + 1; }); });
     seen.sort(function (a, b) { return (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'th'); });
     return { list: seen, count: n };
   }
   var NEW_KEY = '__new';
-  function passCat(p) { return !S.catAll || (S.catAll === NEW_KEY ? !!p.isNew : (p.category || 'อื่น ๆ') === S.catAll); }
+  function passCat(p) { return !S.catAll || (S.catAll === NEW_KEY ? isNewP(p) : tagsOf(p).indexOf(S.catAll) >= 0); }
   function catLabel() { return S.catAll === NEW_KEY ? 'เปิดใหม่' : S.catAll; }
   // เรียงตามราคา: S.sort = '' (ตามเดิม) | 'asc' น้อยไปมาก | 'desc' มากไปน้อย
   var SORT_LABELS = { '': 'ค่าเริ่มต้น', asc: 'ราคา: น้อย → มาก', desc: 'ราคา: มาก → น้อย' };
@@ -211,7 +222,7 @@
   function catButton() {
     var ac = allCategories();
     if (ac.list.length < 2) return '';
-    var hasNew = S.products.some(function (p) { return p.isNew; });
+    var hasNew = S.products.some(isNewP);
     if (S.catAll === NEW_KEY ? !hasNew : (S.catAll && ac.list.indexOf(S.catAll) < 0)) S.catAll = '';
     return '<button type="button" class="cat-btn' + (S.catAll ? ' on' : '') + '" data-act="cat-menu" aria-haspopup="true"><span class="cb-t">' + esc(catLabel() || 'ทั้งหมด') + '</span><i>▾</i></button>';
   }
@@ -222,7 +233,7 @@
     var m = document.createElement('div');
     m.id = 'cat-menu';
     function item(val, label, n) { return '<button type="button" class="' + ((S.catAll || '') === val ? 'on' : '') + '" data-act="cat-pick" data-cat="' + esc(val) + '">' + esc(label) + '<small>' + n + '</small></button>'; }
-    var newN = S.products.filter(function (p) { return p.isNew; }).length;
+    var newN = S.products.filter(isNewP).length;
     m.innerHTML = item('', 'ทั้งหมด', total) + (newN ? item(NEW_KEY, 'เปิดใหม่', newN) : '') + ac.list.map(function (c) { return item(c, c, ac.count[c]); }).join('');
     document.body.appendChild(m);
     var r = btn.getBoundingClientRect();
@@ -238,7 +249,7 @@
 
   function lotCategories(g) {
     var seen = [];
-    g.items.forEach(function (p) { var c = p.category || 'อื่น ๆ'; if (seen.indexOf(c) < 0) seen.push(c); });
+    g.items.forEach(function (p) { tagsOf(p).forEach(function (c) { if (seen.indexOf(c) < 0) seen.push(c); }); });
     return seen;
   }
   function catBar(g) {
@@ -388,7 +399,7 @@
   function popularHtml() {
     var hot = sortItems(S.products.filter(function (p) { return (p.orders || 0) >= POPULAR_MIN && passCat(p); })
       .sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); }).slice(0, POPULAR_MAX));
-    var fresh = sortItems(S.products.filter(function (p) { return p.isNew && passCat(p); }).slice(0, POPULAR_MAX));
+    var fresh = sortItems(S.products.filter(function (p) { return isNewP(p) && passCat(p); }).slice(0, POPULAR_MAX));
     if (!hot.length && !fresh.length) return '';
     var tab = S.popTab === 'new' ? 'new' : 'hot';
     if (tab === 'new' && !fresh.length) tab = 'hot';

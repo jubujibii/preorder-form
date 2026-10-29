@@ -821,3 +821,6 @@ body[data-screen="order"] .group[open] > summary,body[data-screen="order"] .grou
 #lot-now .ln-txt{font-size:13px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 #lot-now .ln-x{flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg) translate(-2px,-2px);margin-right:4px}
 body.ttl-hide #lot-now{opacity:1;pointer-events:auto}
+/* เมนูหมวด: สูงพอดี ๆ เกินก็เลื่อนในเมนู (ไม่ยาวเกินจอ) */
+#cat-menu{max-height:min(52vh,206px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:calc(100vw - 16px)}
+#cat-menu button{flex:none}

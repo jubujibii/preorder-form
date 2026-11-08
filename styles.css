@@ -929,3 +929,49 @@ body.ttl-hide #lot-now{opacity:1;pointer-events:auto}
 body[data-screen="detail"] #app, body[data-screen="cancel"] #app { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
 .cx-row input[type=checkbox] { width: 24px; height: 24px; min-width: 24px; max-width: 24px; min-height: 24px; padding: 0; box-sizing: border-box; flex: none; }
 .cx-reason input[type=radio] { width: 22px; height: 22px; min-width: 22px; min-height: 22px; padding: 0; flex: none; }
+
+/* ===== แก้ตามภาพ: รูปตัวเลือกคอลัมน์ซ้ายของแต่ละแถว, ชื่อตัวเลือก+จำนวนบรรทัดเดียวชิดซ้าย, แถบรวมไม่ตกขอบ ===== */
+.pblock { display: block; }
+.pblock .phead { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.pblock .phead .my-pimg { width: 56px; height: 56px; }
+.pblock .phead .pname { margin: 0; flex: 1 1 auto; min-width: 0; }
+.pblock .orow { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; }
+.pblock .orow .othumb { width: 56px; height: 56px; border-radius: 12px; flex: 0 0 auto; object-fit: cover; }
+.pblock .orow .othumb.ph { background: var(--img-bg); display: inline-block; }
+.pblock .orow.noimg { padding-left: 68px; }
+.orow .obody { flex: 1 1 auto; min-width: 0; }
+.orow .orow-main, .orow .orow-main.has-opt { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; row-gap: 4px; align-items: center; }
+.orow .orow-main .otop { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; justify-self: start; }
+.orow .orow-main .oprice { justify-self: start; grid-column: 1; }
+.orow .orow-main .oact { grid-column: 2; }
+.orow .orow-main:not(.has-opt) { grid-template-columns: auto 1fr auto; }
+.orow .orow-main:not(.has-opt) .oprice { grid-column: 2; margin-left: 10px; }
+.orow .orow-main:not(.has-opt) .oact { grid-column: 3; }
+@media (min-width: 520px) {
+  .orow .orow-main.has-opt { grid-template-columns: auto 1fr auto; }
+  .orow .orow-main.has-opt .otop { grid-column: 1; }
+  .orow .orow-main.has-opt .oprice { grid-column: 2; margin-left: 10px; }
+  .orow .orow-main.has-opt .oact { grid-column: 3; }
+}
+details.group[data-scope="my"][open] { padding-bottom: 14px; }
+.lotfoot { margin: 10px 0 0; }
+/* กระชับแถวตัวเลือก: รูป 48px, ราคากับปุ่มไอคอนบรรทัดเดียว (ปุ่มเล็กลงเป็น 32px) */
+.pblock .phead .my-pimg, .pblock .orow .othumb { width: 48px; height: 48px; border-radius: 10px; }
+.pblock .orow.noimg { padding-left: 60px; }
+.pblock .orow { padding: 4px 0; align-items: center; }
+.orow .orow-main, .orow .orow-main.has-opt { row-gap: 2px; }
+.orow .ibtn { width: 32px; height: 32px; border-radius: 9px; }
+.orow .ibtn svg { width: 18px; height: 18px; }
+.orow .orow-main .oprice { font-size: 16px; }
+
+/* แถวตัวเลือก: ข้อความสองบรรทัดซ้าย (ชื่อตัวเลือก / ฿ราคา × จำนวน) ราคารวมอยู่ขวาบรรทัดเดียวกัน ปุ่มไอคอนต่อท้าย */
+.orow .orow-main, .orow .orow-main.has-opt { grid-template-columns: 1fr auto auto; align-items: center; column-gap: 10px; row-gap: 0; }
+.orow .otxt { grid-column: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.orow .oname { font-weight: 700; font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.orow .osub { color: var(--muted); font-size: 14px; }
+.orow .orow-main .oprice, .orow .orow-main.has-opt .oprice { grid-column: 2; justify-self: end; margin: 0; }
+.orow .orow-main .oact, .orow .orow-main.has-opt .oact { grid-column: 3; }
+.dsmall { color: var(--muted); font-size: 12.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.dbody .dname, .cx-body .dname { font-size: 15px; }
+.cx-body .dsmall, .cx-body .dname, .cx-body .dunit { display: block; }
+.orow .orow-main .oprice { min-width: 56px; text-align: right; }

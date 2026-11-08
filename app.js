@@ -668,6 +668,8 @@
             '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
             (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
+        // รูปของตัวเลือก (ไม่มีรูปตัวเลือกใช้รูปสินค้าหลักแทน)
+        function optThumb(o) { var u = o.optionImageUrl || o.imageUrl; return u ? '<img class="pimg my-pimg othumb" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<span class="my-pimg othumb ph"></span>'; }
         function thumb(o) { var u = o.imageUrl; return u ? '<img class="pimg my-pimg" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
         // สินค้าเดียวกัน (คนละสี/ขนาด) ให้อยู่ติดกัน: เรียงกลุ่มสินค้าตามรายการล่าสุด แล้วในกลุ่มใหม่ไปเก่า
         function cluster(list) {
@@ -680,13 +682,13 @@
         }
         var ordered = S.myTab === 'all' ? cluster(live).concat(cluster(dead)) : cluster(mine);
         var openBlock = false;
-        function closeBlock() { if (openBlock) { html += '</div></div>'; openBlock = false; } }
+        function closeBlock() { if (openBlock) { html += '</div>'; openBlock = false; } }
         ordered.forEach(function (o, idx) {
           var split = S.myTab === 'all' && live.length && dead.length && idx === live.length;
           if (split) { closeBlock(); html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>' ; }
           if (idx === 0 || ordered[idx - 1].productId !== o.productId || split) {
             closeBlock();
-            html += '<div class="pblock' + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '">' + thumb(o) + '<div class="pbody"><div class="pname">' + esc(o.productName) + '</div>';
+            html += '<div class="pblock' + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '"><div class="phead">' + thumb(o) + '<div class="pname">' + esc(o.productName) + '</div></div>';
             openBlock = true;
           }
           var ck = qtyKey(o.productId, o.option);
@@ -698,8 +700,8 @@
             acts = (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<span class="ibtn ph" aria-hidden="true"></span>') +
               '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(ck) + '" data-code="' + esc(o.preorderCode) + '" aria-label="ยกเลิกรายการนี้">' + TRASH_ICON + '</button>';
           }
-          html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '"><div class="orow-main' + (o.option ? ' has-opt' : '') + '">' +
-            (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') + '<span class="oqty">× ' + o.qty + '</span>' +
+          html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (o.option ? '' : ' noimg') + '">' + (o.option ? optThumb(o) : '') + '<div class="obody"><div class="orow-main' + (o.option ? ' has-opt' : '') + '">' +
+            '<span class="otxt">' + (o.option ? '<span class="oname">' + esc(o.option) + '</span>' : '') + '<span class="osub">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span></span>' +
             '<span class="oprice">' + (unit != null ? baht(unit * o.qty * 100) : '') + '</span><span class="oact">' + acts + '</span></div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
@@ -708,7 +710,7 @@
           } else if (o.canCancel && S.confirmCancel === ck) {
             html += '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันยกเลิก') + '</button><button type="button" class="btn" data-act="cancel-no"' + (S.busy ? ' disabled' : '') + '>ไม่ยกเลิก</button></div>';
           }
-          html += '</div>';
+          html += '</div></div>';
         });
         closeBlock();
         if (lotSatang > 0) {
@@ -758,9 +760,9 @@
       live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null) total += o.priceThb * o.qty * 100; });
       var me = d.customer;
       var rows = live.map(function (o) {
-        var img = o.imageUrl ? '<img class="pimg my-pimg" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
-        return '<div class="drow">' + img + '<div class="dbody"><div class="dname">' + esc(o.productName) + '</div>' +
-          '<div class="dsub">' + (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') + (o.priceThb != null ? '<span class="dunit">' + baht(o.priceThb * 100) + ' × ' + o.qty + '</span>' : '<span class="dunit">× ' + o.qty + '</span>') + '</div></div>' +
+        var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
+        return '<div class="drow">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
+          '<div class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div></div>' +
           '<div class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</div></div>';
       }).join('');
       return '<section class="dcard dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
@@ -796,9 +798,9 @@
       can.forEach(function (o) {
         var k = qtyKey(o.productId, o.option);
         html += '<label class="cx-row"><input type="checkbox" data-act="cx-toggle" data-k="' + esc(k) + '"' + (c.sel[k] ? ' checked' : '') + '>' +
-          (o.imageUrl ? '<img class="pimg my-pimg cx-img" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') +
-          '<span class="cx-body"><span class="dname">' + esc(o.productName) + '</span><span class="dsub">' + (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') +
-          '<span class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' : '× ') + o.qty + '</span></span></span>' +
+          ((o.optionImageUrl || o.imageUrl) ? '<img class="pimg my-pimg cx-img" src="' + esc(o.optionImageUrl || o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') +
+          '<span class="cx-body">' + (o.option ? '<span class="dsmall">' + esc(o.productName) + '</span><span class="dname">' + esc(o.option) + '</span>' : '<span class="dname">' + esc(o.productName) + '</span>') +
+          '<span class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' : '× ') + o.qty + '</span></span>' +
           '<span class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</span></label>';
       });
       html += '</section><section class="dcard"><h2 class="dtitle">เหตุผลในการยกเลิก <span class="req">*</span></h2>' +

@@ -153,6 +153,9 @@
     // ใช้ลิงก์ <a> ธรรมดา (LINE รับลิงก์ line.me/R/... จากการกดของผู้ใช้โดยตรง) เปิดแชทร้านโดยไม่มีข้อความให้
     return '<a class="btn block admin-btn" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อแอดมิน</span></a>';
   }
+  var EDIT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg>';
+  var TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+  var CART_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11h10.2l2-8H6.2M9.5 20a1 1 0 1 0 0-.01M17 20a1 1 0 1 0 0-.01"/></svg>';
   var RECEIPT_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4h14a2 2 0 0 1 2 2v21l-3-2-3 2-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2zM12 11h8M12 16h8M12 21h4"/></svg>';
   function myOrdersBtn() {
     return '<button type="button" class="btn block my-btn" data-act="my">' + RECEIPT_ICON + '<span>ดูออเดอร์ของฉัน</span></button>';
@@ -624,7 +627,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? ' · <strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -670,31 +673,43 @@
           });
         }
         var ordered = S.myTab === 'all' ? cluster(live).concat(cluster(dead)) : cluster(mine);
+        var openBlock = false;
+        function closeBlock() { if (openBlock) { html += '</div></div>'; openBlock = false; } }
         ordered.forEach(function (o, idx) {
-          var sameAsPrev = idx > 0 && ordered[idx - 1].productId === o.productId && (idx !== live.length || S.myTab !== 'all');
-          var multi = ordered.filter(function (x) { return x.productId === o.productId && (x.status === 'ยกเลิก') === (o.status === 'ยกเลิก'); }).length > 1 && !!o.option;
-          if (multi && !sameAsPrev) html += '<div class="prod-head">' + thumb(o) + '<span>' + esc(o.productName) + '</span></div>';
-          if (S.myTab === 'all' && live.length && dead.length && idx === live.length) html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>';
+          var split = S.myTab === 'all' && live.length && dead.length && idx === live.length;
+          if (split) { closeBlock(); html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>' ; }
+          if (idx === 0 || ordered[idx - 1].productId !== o.productId || split) {
+            closeBlock();
+            html += '<div class="pblock' + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '">' + thumb(o) + '<div class="pbody"><div class="pname">' + esc(o.productName) + '</div>';
+            openBlock = true;
+          }
           var ck = qtyKey(o.productId, o.option);
           var working = S.busy && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
           var unit = o.priceThb != null ? o.priceThb : null;
-          var badgeTxt = S.myTab !== 'all' ? '' : '<span class="badge stage s-' + stageOf(o) + '">' + esc(o.status === 'รับออเดอร์' ? labelOf[stageOf(o)] : o.status) + '</span>';
-          html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
-            '<div class="line-name' + (!multi && o.imageUrl ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : '<span class="ln-txt">' + esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '') + '</span>') + '</div>' +
-            '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
-            '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
+          var panelOpen = o.canCancel && ((S.edit && S.edit.k === ck) || S.confirmCancel === ck);
+          var acts = '';
+          if (o.canCancel && !panelOpen) {
+            acts = (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<span class="ibtn ph" aria-hidden="true"></span>') +
+              '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(ck) + '" aria-label="ยกเลิกรายการนี้">' + TRASH_ICON + '</button>';
+          }
+          html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '"><div class="orow-main' + (o.option ? ' has-opt' : '') + '">' +
+            (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') + '<span class="oqty">× ' + o.qty + '</span>' +
+            '<span class="oprice">' + (unit != null ? baht(unit * o.qty * 100) : '') + '</span><span class="oact">' + acts + '</span></div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +
               '<p class="small muted">แก้ได้เฉพาะลดจำนวน ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</p></div>';
           } else if (o.canCancel && S.confirmCancel === ck) {
             html += '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันยกเลิก') + '</button><button type="button" class="btn" data-act="cancel-no"' + (S.busy ? ' disabled' : '') + '>ไม่ยกเลิก</button></div>';
-          } else if (o.canCancel) {
-            html += '<div class="line-actions">' + (o.qty > 1 ? '<button type="button" class="linkbtn" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '">แก้ไข</button>' : '') +
-              '<button type="button" class="linkbtn danger-link" data-act="cancel-ask" data-k="' + esc(ck) + '">ยกเลิก</button></div>';
           }
           html += '</div>';
         });
+        closeBlock();
+        if (lotSatang > 0) {
+          var lotProds = {}, lotPieces = 0;
+          live.forEach(function (o) { if (o.status !== 'คืนเงิน' && o.priceThb != null) { lotProds[o.productId] = 1; lotPieces += o.qty; } });
+          html += '<div class="lotfoot"><span>รวม ' + Object.keys(lotProds).length + ' รายการ (' + lotPieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(lotSatang) + '</strong></span></div>';
+        }
         html += '</details>';
       });
         return html;
@@ -724,7 +739,7 @@
       } else {
         html += shown.length ? renderGroups(shown) : empty;
       }
-      return html + '<button class="btn block" data-act="more">กลับไปสั่งของ</button>' + adminBtn();
+      return html + '<button class="btn primary block back-btn" data-act="more">' + CART_ICON + '<span>กลับไปสั่งของ</span></button>' + adminBtn();
     },
   };
 

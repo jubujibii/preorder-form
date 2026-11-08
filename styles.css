@@ -834,3 +834,46 @@ body.ttl-hide #lot-now{opacity:1;pointer-events:auto}
 /* เมนูหมวด: สูงพอดี ๆ เกินก็เลื่อนในเมนู (ไม่ยาวเกินจอ) */
 #cat-menu{max-height:min(52vh,206px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:calc(100vw - 16px)}
 #cat-menu button{flex:none}
+
+/* ===== หน้าออเดอร์ของฉัน (ดีไซน์ใหม่): รูปสินค้าหลักซ้าย, ตัวเลือกเป็นชิปมีสี, ปุ่มไอคอน, แถบรวมท้าย Lot ===== */
+.g-sep { display: inline-block; width: 1.5px; height: 14px; background: rgba(60, 40, 30, .22); margin: 0 10px; vertical-align: -2px; }
+.pblock { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+.group > summary + .pblock, .group > .billbox + .pblock, .group > .refundbox + .pblock { border-top: 1px solid var(--line); }
+.pblock .my-pimg { width: 76px; height: 76px; border-radius: 14px; flex: 0 0 auto; object-fit: cover; }
+.pblock .pbody { flex: 1 1 auto; min-width: 0; }
+.pblock .pname { font-weight: 700; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; margin-bottom: 6px; }
+.pblock.is-cancelled .my-pimg { opacity: .5; filter: grayscale(1); }
+.pblock.is-cancelled .pname { opacity: .6; }
+.orow { padding: 3px 0; }
+.orow.saving { opacity: .6; pointer-events: none; }
+.orow-main { display: flex; align-items: center; gap: 8px; min-height: 38px; }
+.orow .oleft { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.orow .opt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 14px; font-weight: 600; max-width: 100%; overflow-wrap: anywhere; }
+.orow .oqty { color: var(--muted); font-size: 14px; }
+.orow .oprice { font-weight: 800; font-size: 17px; white-space: nowrap; }
+.orow .oact { display: inline-flex; gap: 6px; min-width: 0; }
+.ibtn { width: 36px; height: 36px; border-radius: 10px; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.ibtn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ibtn.edit { background: var(--accent-soft); color: var(--accent-dark); }
+.ibtn.del { background: var(--danger-bg); color: var(--danger); }
+.ibtn.ph { background: transparent; cursor: default; }
+.orow.is-cancelled .opt-chip, .orow.is-cancelled .oqty, .orow.is-cancelled .oprice { text-decoration: line-through; opacity: .5; }
+.orow .edit-qty, .orow .cancel-confirm { margin-top: 6px; }
+.lotfoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); font-weight: 600; font-size: 15px; }
+.lotfoot .lf-r { padding-left: 12px; border-left: 1.5px solid rgba(60, 40, 30, .18); }
+.lotfoot strong { color: var(--accent-dark); font-size: 21px; margin-left: 6px; }
+.back-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.back-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.lotfoot { font-size: 14px; }
+.lotfoot .lf-r { white-space: nowrap; }
+.lotfoot strong { font-size: 19px; }
+
+/* แถวตัวเลือก: ชื่อตัวเลือกอยู่บรรทัดบน (ยาวได้) บรรทัดล่างเป็น จำนวน · ราคา · ปุ่ม; จอกว้างพอจึงรวมเป็นบรรทัดเดียวตามภาพ */
+.orow .orow-main { display: grid; grid-template-columns: 1fr auto auto; column-gap: 8px; row-gap: 2px; align-items: center; }
+.orow .orow-main.has-opt .opt-chip { grid-column: 1 / -1; justify-self: start; }
+.orow .oprice { justify-self: end; }
+@media (min-width: 520px) {
+  .orow .orow-main.has-opt { grid-template-columns: auto 1fr auto auto; }
+  .orow .orow-main.has-opt .opt-chip { grid-column: auto; }
+}

@@ -1022,3 +1022,5 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 /* ชื่อสินค้าและชื่อตัวเลือก: บรรทัดเดียว ยาวเกินแสดงเป็น … (ไม่ห่อบรรทัด) */
 .pblock .pname, .dbody .dname, .dbody .dsmall, .orow .oname, .eprow .oname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; min-width: 0; }
 .pblock .phead .pname { flex: 1 1 0; }
+/* ชื่อสินค้า: แสดงได้ 2 บรรทัด เกินนั้นเป็น … (ชื่อตัวเลือกยังบรรทัดเดียว) */
+.pblock .pname, .dbody .dname:not(.dopt), .dbody .dsmall { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; overflow-wrap: anywhere; }

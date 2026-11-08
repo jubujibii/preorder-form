@@ -331,6 +331,7 @@ a.admin-btn { text-decoration: none; }
 /* สินค้าเดียวกันหลายตัวเลือก: แถวต่อจากแรกไม่ซ้ำชื่อ ชิดกลุ่มเดียวกัน */
 .my-line.same-product { border-top: 0; padding-top: 2px; }
 .opt-tag.alone { margin-left: 14px; }
+.opt-price { color: #C2472B; font-weight: 700; font-size: 13px; margin-left: 4px; }
 
 /* สินค้าเดียวกันหลายตัวเลือก: หัวชื่อสินค้าหนึ่งครั้ง แล้วแถวตัวเลือกย่อหน้าใต้หัว */
 .prod-head { font-weight: 700; font-size: 16px; padding: 12px 0 0; border-top: 1px solid var(--line); }

@@ -1,3 +1,15 @@
+// ราคาต่อชิ้นตามตัวเลือก (p.optionPrices = { ชื่อตัวเลือก: บาท } ที่เซิร์ฟเวอร์ส่งมา); ตัวเลือกที่ไม่มีราคาเอง ใช้ราคาหลักของสินค้า
+function unitPriceThb(p, option) {
+  var m = p.optionPrices, v = m ? m[option] : undefined;
+  return v > 0 ? v : p.priceThb;
+}
+// ราคาต่ำสุด/สูงสุดของสินค้า (ใช้แสดงช่วงราคา และเรียงตามราคา)
+function priceBounds(p) {
+  var opts = p.options && p.options.length ? p.options : [''];
+  var prices = opts.map(function (o) { return unitPriceThb(p, o); });
+  return { lo: Math.min.apply(null, prices), hi: Math.max.apply(null, prices) };
+}
+
 // คำนวณตะกร้า (ใช้ทั้งในหน้าเว็บและเทสต์) — ไม่พึ่งไฟล์อื่น
 function cartSummary(cart, productsById) {
   var lines = [];
@@ -6,7 +18,7 @@ function cartSummary(cart, productsById) {
     if (!(l.qty > 0)) return;
     var p = productsById.get(l.productId);
     if (!p) throw new Error('ไม่พบสินค้า ' + l.productId);
-    var lineSatang = p.priceThb * l.qty * 100;
+    var lineSatang = unitPriceThb(p, l.option) * l.qty * 100;
     lines.push({ productId: l.productId, option: l.option, qty: l.qty, lineSatang: lineSatang });
     total += lineSatang;
   });

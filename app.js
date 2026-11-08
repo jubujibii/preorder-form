@@ -22,6 +22,8 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  // ราคาที่แสดง: ถ้าตัวเลือกราคาต่างกันแสดงเป็นช่วง เช่น ฿70 – ฿80
+  function priceLabel(p) { var b = priceBounds(p); return b.lo === b.hi ? baht(b.lo * 100) : baht(b.lo * 100) + ' – ' + baht(b.hi * 100); }
   function baht(satang) {
     var s = formatSatang(satang);
     return '฿' + (s.slice(-3) === '.00' ? s.slice(0, -3) : s);
@@ -70,7 +72,7 @@
   function mockApi(p) {
     var closeAt = new Date(Date.now() + 5 * 86400000).toISOString();
     var products = params.get('empty') === '1' ? [] : [
-      { orders: 12, productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
+      { orders: 12, productId: '090426-P01', preorderCode: '090426', name: 'ที่นอนแมวทรงโดนัท', priceThb: 66, optionPrices: { 'เทา': 80 }, options: ['ฟ้า', 'ชมพู', 'เทา'], closeAt: closeAt, imageUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#9ad1cc"/><text x="300" y="210" font-size="40" text-anchor="middle" fill="#134">รูปสินค้าตัวอย่าง</text></svg>') },
       { orders: 7, productId: '090426-P02', preorderCode: '090426', name: 'ของเล่นกระดิ่งปลาทูน่า', priceThb: 58, options: [], closeAt: closeAt, imageUrl: 'https://invalid.invalid/x.jpg' },
       { isNew: true, orders: 5, productId: '311226-P01', preorderCode: '311226-2', name: 'สินค้ารอบ 2', priceThb: 100, options: [], closeAt: closeAt },
       { productId: '311226-P00', preorderCode: '311226-1', name: 'สินค้ารอบ 1', priceThb: 90, options: [], closeAt: closeAt },
@@ -84,7 +86,7 @@
     else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
     else if (p.action === 'placeOrder') {
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
-      else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + pr.priceThb * l.qty * 100; }, 0) }; }
+      else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + unitPriceThb(pr, l.option) * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }], paymentInfo: 'ธนาคารตัวอย่าง\nเลขที่บัญชี 123-4-56789-0\nชื่อบัญชี ทดสอบ' };
@@ -195,7 +197,7 @@
   function sortItems(list) {
     if (!S.sort) return list;
     var dir = S.sort === 'asc' ? 1 : -1;
-    return list.slice().sort(function (a, b) { return dir * ((a.priceThb || 0) - (b.priceThb || 0)); });
+    return list.slice().sort(function (a, b) { return dir * ((priceBounds(a).lo || 0) - (priceBounds(b).lo || 0)); });
   }
   var SORT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5"/></svg>';
   function sortButton() {
@@ -293,19 +295,19 @@
     var p = productsById().get(pid);
     if (!p) return;
     var urgent = urgencyText(p.closeAt);
-    var body = [flexText(p.name, { weight: 'bold', size: 'md' }), flexText(baht(p.priceThb * 100), { weight: 'bold', size: 'lg', color: '#C2472B', margin: 'sm' }),
+    var body = [flexText(p.name, { weight: 'bold', size: 'md' }), flexText(priceLabel(p), { weight: 'bold', size: 'lg', color: '#C2472B', margin: 'sm' }),
       flexText('Lot ' + p.preorderCode + ' · ปิดรับ ' + closeText(p.closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
     if (urgent) body.push(flexText('⏰ ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'sm' }));
     var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'สั่งเลย', uri: shareLink('p=' + encodeURIComponent(pid)) } }] } };
     if (/^https:\/\//.test(p.imageUrl || '')) bubble.hero = { type: 'image', url: p.imageUrl, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' };
-    sharePick([{ type: 'flex', altText: p.name + ' ' + baht(p.priceThb * 100) + ' · สั่งเลยที่ PRE2PET', contents: bubble }], 'แชร์แล้ว ✓');
+    sharePick([{ type: 'flex', altText: p.name + ' ' + priceLabel(p) + ' · สั่งเลยที่ PRE2PET', contents: bubble }], 'แชร์แล้ว ✓');
   }
   function shareLot(code) {
     var items = S.products.filter(function (p) { return p.preorderCode === code; });
     if (!items.length) return;
     var urgent = urgencyText(items[0].closeAt), shown = items.slice(0, 6);
     var rows = shown.map(function (p) {
-      return { type: 'box', layout: 'horizontal', margin: 'sm', contents: [flexText(p.name, { size: 'sm', flex: 4 }), flexText(baht(p.priceThb * 100), { size: 'sm', align: 'end', flex: 2, color: '#C2472B' })] };
+      return { type: 'box', layout: 'horizontal', margin: 'sm', contents: [flexText(p.name, { size: 'sm', flex: 4 }), flexText(priceLabel(p), { size: 'sm', align: 'end', flex: 2, color: '#C2472B' })] };
     });
     if (items.length > shown.length) rows.push(flexText('และอีก ' + (items.length - shown.length) + ' รายการ', { size: 'xs', color: '#8C7A6D', margin: 'sm' }));
     var body = [flexText('พรีออเดอร์ Lot ' + code, { weight: 'bold', size: 'lg' }), flexText('ปิดรับ ' + closeText(items[0].closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
@@ -319,11 +321,11 @@
     if (type === 'p') {
       var p = productsById().get(id);
       if (!p) return '';
-      return p.name + ' ' + baht(p.priceThb * 100) + '\n📌 : ' + shareLink('p=' + encodeURIComponent(id));
+      return p.name + ' ' + priceLabel(p) + '\n📌 : ' + shareLink('p=' + encodeURIComponent(id));
     }
     var items = S.products.filter(function (x) { return x.preorderCode === id; });
     if (!items.length) return '';
-    var prices = items.map(function (x) { return x.priceThb; }), lo = Math.min.apply(null, prices), hi = Math.max.apply(null, prices);
+    var los = items.map(function (x) { return priceBounds(x).lo; }), his = items.map(function (x) { return priceBounds(x).hi; }), lo = Math.min.apply(null, los), hi = Math.max.apply(null, his);
     return 'สินค้าเปิดใหม่ Lot ' + id + ' ค่าา\nราคา ' + (lo === hi ? baht(lo * 100) : baht(lo * 100) + ' - ' + baht(hi * 100)) + '\n📌 : ' + shareLink('lot=' + encodeURIComponent(id));
   }
   function closeShareMenu() { var m = document.getElementById('share-menu'); if (m) m.remove(); }
@@ -386,7 +388,7 @@
   }
   function variantRow(p, o, oi, hasOptImg) {
     var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
-    return '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '" data-oi="' + oi + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + '</span>' +
+    return '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '" data-oi="' + oi + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + (priceBounds(p).lo !== priceBounds(p).hi ? ' <small class="opt-price">' + baht(unitPriceThb(p, o) * 100) + '</small>' : '') + '</span>' +
       '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
       '<output aria-live="off">' + q + '</output>' +
       '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
@@ -426,7 +428,7 @@
       '<div class="pc-img">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</div>' +
       '<div class="pc-name">' + esc(p.name) + '</div>' +
       '<div class="pc-sub">' + (opts.length > 1 ? opts.length + ' ตัวเลือก' : '') + '</div>' +
-      '<div class="pc-foot"><span class="pc-price">' + baht(p.priceThb * 100) + '</span>' + ctl + '</div></div>';
+      '<div class="pc-foot"><span class="pc-price">' + priceLabel(p) + '</span>' + ctl + '</div></div>';
   }
   function sheetHtml(pid) {
     var p = productsById().get(pid);
@@ -434,7 +436,7 @@
     var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
     return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sh-top"><div class="sheet-grip"></div>' +
       '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
-      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + baht(p.priceThb * 100) + '</span>' + shareBtn('share-menu', 'data-type="p" data-id="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
+      '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + priceLabel(p) + '</span>' + shareBtn('share-menu', 'data-type="p" data-id="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
       '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
       (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
       (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +

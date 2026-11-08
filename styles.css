@@ -468,16 +468,20 @@ h1, h2, .g-title, .pay-amt, .ref-amt, .tab-title, .pb-txt strong, .tile-pay .til
 body[data-screen="my"] .brand { display: none; }
 body[data-screen="detail"] .brand { display: none; }
 body[data-screen="cancel"] .brand { display: none; }
+body[data-screen="edit"] .brand { display: none; }
 body[data-screen="my"] .top-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-left: -8px; border: 0; background: none; color: var(--ink); font-size: 30px; line-height: 1; cursor: pointer; border-radius: 999px; }
 body[data-screen="detail"] .top-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-left: -8px; border: 0; background: none; color: var(--ink); font-size: 30px; line-height: 1; cursor: pointer; border-radius: 999px; }
 body[data-screen="cancel"] .top-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-left: -8px; border: 0; background: none; color: var(--ink); font-size: 30px; line-height: 1; cursor: pointer; border-radius: 999px; }
+body[data-screen="edit"] .top-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-left: -8px; border: 0; background: none; color: var(--ink); font-size: 30px; line-height: 1; cursor: pointer; border-radius: 999px; }
 body[data-screen="my"] .top-title { display: inline-flex; align-items: center; gap: 8px; flex: 1; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 19px; }
 body[data-screen="detail"] .top-title { display: inline-flex; align-items: center; gap: 8px; flex: 1; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 19px; }
 body[data-screen="cancel"] .top-title { display: inline-flex; align-items: center; gap: 8px; flex: 1; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 19px; }
+body[data-screen="edit"] .top-title { display: inline-flex; align-items: center; gap: 8px; flex: 1; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 19px; }
 body[data-screen="my"] .top-title::before { content: ''; width: 22px; height: 22px; background: var(--accent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='7' cy='13' rx='3' ry='4' fill='black'/%3E%3Cellipse cx='25' cy='13' rx='3' ry='4' fill='black'/%3E%3Cellipse cx='12.5' cy='7' rx='3' ry='4.2' fill='black'/%3E%3Cellipse cx='19.5' cy='7' rx='3' ry='4.2' fill='black'/%3E%3Cpath d='M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z' fill='black'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='7' cy='13' rx='3' ry='4' fill='black'/%3E%3Cellipse cx='25' cy='13' rx='3' ry='4' fill='black'/%3E%3Cellipse cx='12.5' cy='7' rx='3' ry='4.2' fill='black'/%3E%3Cellipse cx='19.5' cy='7' rx='3' ry='4.2' fill='black'/%3E%3Cpath d='M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z' fill='black'/%3E%3C/svg%3E") center / contain no-repeat; }
 body[data-screen="my"] .member { margin-left: 0; }
 body[data-screen="detail"] .member { margin-left: 0; }
 body[data-screen="cancel"] .member { margin-left: 0; }
+body[data-screen="edit"] .member { margin-left: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---- รอบปรับตามภาพต้นแบบ: สัตว์เกาะขอบการ์ด, อวาตาร์ Lot, หัวเว็บ ---- */
@@ -926,7 +930,7 @@ body.ttl-hide #lot-now{opacity:1;pointer-events:auto}
 .cx-note svg { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: var(--accent-dark); stroke-width: 1.8; stroke-linecap: round; }
 .cx-btns { display: flex; gap: 12px; margin: 8px 0 24px; }
 .cx-btns .btn { flex: 1; }
-body[data-screen="detail"] #app, body[data-screen="cancel"] #app { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+body[data-screen="detail"] #app, body[data-screen="cancel"] #app, body[data-screen="edit"] #app { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
 .cx-row input[type=checkbox] { width: 24px; height: 24px; min-width: 24px; max-width: 24px; min-height: 24px; padding: 0; box-sizing: border-box; flex: none; }
 .cx-reason input[type=radio] { width: 22px; height: 22px; min-width: 22px; min-height: 22px; padding: 0; flex: none; }
 
@@ -975,3 +979,46 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .dbody .dname, .cx-body .dname { font-size: 15px; }
 .cx-body .dsmall, .cx-body .dname, .cx-body .dunit { display: block; }
 .orow .orow-main .oprice { min-width: 56px; text-align: right; }
+
+/* ===== หน้าแก้ไขออเดอร์ ===== */
+.eprow { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.eprow.noimg { padding-left: 60px; }
+.eprow .othumb { width: 48px; height: 48px; border-radius: 10px; flex: 0 0 auto; object-fit: cover; }
+.eprow .othumb.ph { background: var(--img-bg); display: inline-block; }
+.eprow .eptxt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.eprow .oname { font-weight: 700; font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.eprow .osub { color: var(--muted); font-size: 14px; }
+.eprow .eprice { min-width: 56px; text-align: right; font-weight: 800; font-size: 16px; white-space: nowrap; }
+.eprow .stepper { flex: 0 0 auto; }
+.ep-note { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); color: var(--warn-ink); font-size: 14px; }
+.ep-note svg { width: 22px; height: 22px; flex: 0 0 auto; fill: none; stroke: var(--warn-ink); stroke-width: 1.8; stroke-linecap: round; }
+.dcard .dhead { display: flex; align-items: center; gap: 14px; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+/* สเต็ปเปอร์ในหน้าแก้ไขออเดอร์: ขนาดกะทัดรัดให้ชื่อตัวเลือกมีที่พอ */
+.eprow .ep-step { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); }
+.eprow .ep-step button { width: 30px; height: 30px; min-width: 30px; min-height: 30px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; }
+.eprow .ep-step output { min-width: 22px; text-align: center; font-size: 15px; font-weight: 700; }
+.eprow .eprice { min-width: 48px; font-size: 15px; }
+.eprow { gap: 8px; }
+
+/* ชื่อตัวเลือกยาวเกินพื้นที่: แสดงเป็น … บรรทัดเดียว (ไม่ห่อเป็นสองบรรทัด) */
+.orow .oname, .eprow .oname, .dbody .dname.dopt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.orow .otxt, .eprow .eptxt, .dbody { min-width: 0; }
+/* ป๊อปอัปยืนยันลบรายการ */
+.dlg-ov { position: fixed; inset: 0; z-index: 200; background: rgba(40, 28, 20, .5); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.dlg { position: relative; width: 100%; max-width: 340px; background: var(--paper); border-radius: 24px; padding: 28px 20px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0, 0, 0, .25); }
+.dlg-x { position: absolute; top: 10px; right: 14px; border: 0; background: none; font-size: 28px; line-height: 1; color: var(--ink); cursor: pointer; }
+.dlg-ico { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; }
+.dlg-ico svg { width: 30px; height: 30px; fill: none; stroke: var(--accent-dark); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dlg h2 { margin: 0 0 8px; font-size: 20px; font-family: var(--font-display); }
+.dlg p { margin: 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.dlg-btns { display: flex; gap: 10px; }
+.dlg-btns .btn { flex: 1; }
+/* ให้ชื่อตัวเลือกมีที่แสดงมากขึ้นก่อนตัดเป็น … */
+.orow .ibtn { width: 30px; height: 30px; }
+.orow .oact { gap: 4px; }
+.orow .orow-main .oprice { min-width: 44px; font-size: 15px; }
+.orow .orow-main, .orow .orow-main.has-opt { column-gap: 6px; }
+.pblock .orow { gap: 10px; }
+/* ชื่อสินค้าและชื่อตัวเลือก: บรรทัดเดียว ยาวเกินแสดงเป็น … (ไม่ห่อบรรทัด) */
+.pblock .pname, .dbody .dname, .dbody .dsmall, .orow .oname, .eprow .oname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; min-width: 0; }
+.pblock .phead .pname { flex: 1 1 0; }

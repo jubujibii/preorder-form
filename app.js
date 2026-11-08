@@ -89,6 +89,7 @@
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + unitPriceThb(pr, l.option) * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
       res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
+        customer: { recipientName: 'Kunyakrit Changhin (Mint)', phone: '081 234 5678', address: '123/45 ซ.สุขุมวิท 21 เขตวัฒนา กรุงเทพฯ 10110' },
         billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }], paymentInfo: 'ธนาคารตัวอย่าง\nเลขที่บัญชี 123-4-56789-0\nชื่อบัญชี ทดสอบ' };
       if (params.get('nobill')) res.billing = [];
       if (params.get('refund')) {
@@ -102,6 +103,10 @@
     } else if (p.action === 'uploadSlip') {
       if (params.get('slipfail') === '1') res = { ok: false, error: 'server_error', message: 'x' };
       else { mockDb.slip[p.round] = new Date().toISOString(); res = { ok: true, slipAt: mockDb.slip[p.round] }; }
+    } else if (p.action === 'cancelOrders') {
+      var cn = 0;
+      (p.items || []).forEach(function (it) { mockDb.orders.forEach(function (l) { if (l.productId === it.productId && l.option === it.option && (l.status || 'รับออเดอร์') === 'รับออเดอร์') { l.status = 'ยกเลิก'; l.cancelReason = p.reason; cn++; } }); });
+      res = { ok: true, cancelled: cn };
     } else if (p.action === 'cancelOrder') {
       var n = 0;
       mockDb.orders.forEach(function (l) { if (l.productId === p.productId && l.option === p.option && (l.status || 'รับออเดอร์') === 'รับออเดอร์') { l.status = 'ยกเลิก'; n++; } });
@@ -128,6 +133,7 @@
 
   function render() {
     document.body.setAttribute('data-screen', S.screen);
+    var ttl = document.querySelector('.top-title'); if (ttl) ttl.textContent = S.screen === 'detail' ? 'รายละเอียดออเดอร์' : S.screen === 'cancel' ? 'ยกเลิกออเดอร์' : 'ออเดอร์ของฉัน';
     memberEl.hidden = !S.memberCode;
     memberEl.textContent = S.memberCode;
     if (S.screen !== 'order' && S.sheet) closeSheet();
@@ -690,7 +696,7 @@
           var acts = '';
           if (o.canCancel && !panelOpen) {
             acts = (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<span class="ibtn ph" aria-hidden="true"></span>') +
-              '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(ck) + '" aria-label="ยกเลิกรายการนี้">' + TRASH_ICON + '</button>';
+              '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(ck) + '" data-code="' + esc(o.preorderCode) + '" aria-label="ยกเลิกรายการนี้">' + TRASH_ICON + '</button>';
           }
           html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '"><div class="orow-main' + (o.option ? ' has-opt' : '') + '">' +
             (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') + '<span class="oqty">× ' + o.qty + '</span>' +
@@ -740,6 +746,69 @@
         html += shown.length ? renderGroups(shown) : empty;
       }
       return html + '<button class="btn primary block back-btn" data-act="more">' + CART_ICON + '<span>กลับไปสั่งของ</span></button>' + adminBtn();
+    },
+
+    // หน้า "รายละเอียดออเดอร์" ของ Lot หนึ่ง (แตะหัวการ์ด Lot ในหน้าออเดอร์ของฉัน)
+    detail: function () {
+      var d = S.my, code = S.detailCode;
+      if (!d) return '<p class="center muted">กำลังโหลด…</p>';
+      var mine = lotMine(code), live = mine.filter(isLive);
+      if (!live.length) return '<p class="muted center">ไม่พบรายการของ Lot นี้</p><button class="btn block" data-act="detail-back">กลับ</button>';
+      var pieces = 0, total = 0, prods = {};
+      live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null) total += o.priceThb * o.qty * 100; });
+      var me = d.customer;
+      var rows = live.map(function (o) {
+        var img = o.imageUrl ? '<img class="pimg my-pimg" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
+        return '<div class="drow">' + img + '<div class="dbody"><div class="dname">' + esc(o.productName) + '</div>' +
+          '<div class="dsub">' + (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') + (o.priceThb != null ? '<span class="dunit">' + baht(o.priceThb * 100) + ' × ' + o.qty + '</span>' : '<span class="dunit">× ' + o.qty + '</span>') + '</div></div>' +
+          '<div class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</div></div>';
+      }).join('');
+      return '<section class="dcard dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
+        '<div><div class="dlot">Lot ' + esc(code) + '</div><div class="dmeta">' + pieces + ' ชิ้น</div><span class="stage dchip">' + esc(lotStageLabel(code)) + '</span></div></section>' +
+        '<section class="dcard"><h2 class="dtitle">รายการสินค้า (' + Object.keys(prods).length + ' รายการ)</h2>' + rows +
+        '<div class="lotfoot"><span>รวม ' + Object.keys(prods).length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(total) + '</strong></span></div></section>' +
+        (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +
+          (me.recipientName ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>' + esc(me.recipientName) + '</span></div>' : '') +
+          (me.phone ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>' + esc(me.phone) + '</span></div>' : '') +
+          (me.address ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>' + esc(me.address) + '</span></div>' : '') +
+          '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
+        '<button class="btn block" data-act="detail-back">กลับ</button>' + adminBtn();
+    },
+
+    // หน้า "ยกเลิกออเดอร์": เลือกรายการ (ยกเลิกทั้งแถว) + เหตุผล
+    cancel: function () {
+      var d = S.my, c = S.cancel;
+      if (!d || !c) return '<p class="center muted">กำลังโหลด…</p>';
+      var mine = lotMine(c.code), live = mine.filter(isLive), can = live.filter(function (o) { return o.canCancel; });
+      var pieces = 0, total = 0;
+      live.forEach(function (o) { pieces += o.qty; if (o.priceThb != null) total += o.priceThb * o.qty * 100; });
+      var selPieces = 0, canPieces = 0;
+      can.forEach(function (o) { canPieces += o.qty; if (c.sel[qtyKey(o.productId, o.option)]) selPieces += o.qty; });
+      var allOn = can.length > 0 && can.every(function (o) { return c.sel[qtyKey(o.productId, o.option)]; });
+      var html = errBanner() +
+        '<section class="dcard cx-head"><div><div class="cx-order">ออเดอร์ ' + esc(S.memberCode || '') + ' · Lot ' + esc(c.code) + '</div><div class="dmeta">จำนวน ' + pieces + ' ชิ้น<span class="g-sep"></span>ยอดรวม <strong class="g-sum">' + baht(total) + '</strong></div></div>' +
+        '<span class="stage dchip">' + esc(lotStageLabel(c.code)) + '</span></section>';
+      if (!can.length) {
+        return html + '<section class="dcard"><p class="muted">ไม่มีรายการที่ยกเลิกเองได้ (Lot นี้อาจปิดรับหรือร้านแจ้งยอดแล้ว) กรุณาติดต่อแอดมินทางแชท</p></section><button class="btn block" data-act="cx-back">กลับ</button>' + adminBtn();
+      }
+      html += '<h2 class="dtitle outer">สินค้าที่ต้องการยกเลิก</h2><section class="dcard cx-list">' +
+        '<label class="cx-row cx-all"><input type="checkbox" data-act="cx-all"' + (allOn ? ' checked' : '') + '><span class="cx-txt">เลือกทั้งหมด (' + canPieces + ' ชิ้น)</span><span class="cx-count">เลือกแล้ว ' + selPieces + ' ชิ้น</span></label>';
+      can.forEach(function (o) {
+        var k = qtyKey(o.productId, o.option);
+        html += '<label class="cx-row"><input type="checkbox" data-act="cx-toggle" data-k="' + esc(k) + '"' + (c.sel[k] ? ' checked' : '') + '>' +
+          (o.imageUrl ? '<img class="pimg my-pimg cx-img" src="' + esc(o.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') +
+          '<span class="cx-body"><span class="dname">' + esc(o.productName) + '</span><span class="dsub">' + (o.option ? '<span class="opt-chip">' + esc(o.option) + '</span>' : '') +
+          '<span class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' : '× ') + o.qty + '</span></span></span>' +
+          '<span class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</span></label>';
+      });
+      html += '</section><section class="dcard"><h2 class="dtitle">เหตุผลในการยกเลิก <span class="req">*</span></h2>' +
+        CANCEL_REASONS.map(function (r, i) {
+          return '<label class="cx-reason' + (c.reason === r ? ' on' : '') + '"><input type="radio" name="cxr" data-act="cx-reason" data-i="' + i + '"' + (c.reason === r ? ' checked' : '') + '><span>' + esc(r) + '</span></label>';
+        }).join('') +
+        (c.reason === CANCEL_REASONS[3] ? '<input class="cx-other" id="cx-other" type="text" maxlength="150" placeholder="โปรดระบุเหตุผล" value="' + esc(c.other) + '">' : '') +
+        '</section><div class="cx-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span>เมื่อยกเลิกแล้ว รายการที่เลือกจะถูกนำออกจากออเดอร์ทันที หากมีการชำระเงินแล้ว ระบบจะดำเนินการคืนเงินตามช่องทางเดิม</span></div>' +
+        '<div class="cx-btns"><button type="button" class="btn" data-act="cx-back"' + (c.busy ? ' disabled' : '') + '>กลับ</button><button type="button" class="btn primary" data-act="cx-submit"' + (c.busy ? ' disabled' : '') + '>' + (c.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันการยกเลิก') + '</button></div>';
+      return html;
     },
   };
 
@@ -848,6 +917,48 @@
       S.error = res.errors ? 'ตรวจข้อมูลที่ทำเครื่องหมายไว้' : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
       render();
     }).catch(function () { S.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; render(); });
+  }
+
+  // ---------- หน้ารายละเอียด/ยกเลิกออเดอร์ ----------
+  var CANCEL_REASONS = ['เปลี่ยนใจ / ไม่ต้องการสินค้าแล้ว', 'สั่งผิด / ต้องการแก้ไขรายการ', 'พบปัญหากับสินค้า', 'อื่น ๆ (โปรดระบุ)'];
+  // รายการของ Lot นี้ เรียงให้สินค้าเดียวกันอยู่ติดกัน (ตามลำดับที่เจอก่อน)
+  function lotMine(code) {
+    if (!S.my) return [];
+    var list = mergeOrderLines(S.my.orders).filter(function (o) { return o.preorderCode === code; }), order = [];
+    list.forEach(function (o) { if (order.indexOf(o.productId) < 0) order.push(o.productId); });
+    return list.map(function (o, i) { return { o: o, i: i }; }).sort(function (x, y) { return order.indexOf(x.o.productId) - order.indexOf(y.o.productId) || x.i - y.i; }).map(function (e) { return e.o; });
+  }
+  function isLive(o) { return o.status !== 'ยกเลิก' && o.status !== 'คืนเงิน'; }
+  function lotStageLabel(code) {
+    var d = S.my, mine = lotMine(code).filter(isLive);
+    if (!d || !mine.length) return '';
+    var st = paymentStateByPreorder(d.billing)[code] || lineTab(mine[0], d.billing), lab = {};
+    ORDER_TABS.forEach(function (t) { lab[t.key] = t.label; });
+    return (lab[st] || '') + (st === 'new' ? ' รอบ 1' : '');
+  }
+  function openDetail(code) { S.detailCode = code; setScreen('detail'); }
+  function openCancel(code, preKey) {
+    var sel = {};
+    if (preKey) sel[preKey] = true;
+    S.cancel = { code: code, sel: sel, reason: CANCEL_REASONS[0], other: '', busy: false };
+    S.error = ''; setScreen('cancel');
+  }
+  function submitCancel() {
+    var c = S.cancel;
+    var items = Object.keys(c.sel).filter(function (k) { return c.sel[k]; }).map(function (k) { var p = k.split('\u0001'); return { productId: p[0], option: p[1] || '' }; });
+    var other = (document.getElementById('cx-other') || { value: c.other }).value.trim();
+    c.other = other;
+    var reason = c.reason === CANCEL_REASONS[3] ? 'อื่น ๆ: ' + other : c.reason;
+    if (!items.length) { S.error = 'เลือกรายการที่ต้องการยกเลิกอย่างน้อย 1 รายการ'; render(); window.scrollTo(0, 0); return; }
+    if (c.reason === CANCEL_REASONS[3] && !other) { S.error = 'โปรดระบุเหตุผลในการยกเลิก'; render(); window.scrollTo(0, 0); return; }
+    c.busy = true; S.error = ''; render();
+    api('cancelOrders', { items: items, reason: reason }).then(function (res) {
+      c.busy = false;
+      if (!res.ok) { S.error = res.message || 'ยกเลิกไม่สำเร็จ ลองใหม่อีกครั้ง'; render(); window.scrollTo(0, 0); return; }
+      return api('myOrders').then(function (m) { if (m.ok) S.my = m; }).catch(function () {}).then(function () {
+        S.cancel = null; S.edit = null; S.confirmCancel = ''; setScreen('my'); toast('ยกเลิกรายการแล้ว ✓');
+      });
+    }).catch(function () { c.busy = false; S.error = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; render(); window.scrollTo(0, 0); });
   }
 
   function showMy() {
@@ -1117,7 +1228,7 @@
   }, true);
 
   var topBack = document.querySelector('[data-top-back]');
-  if (topBack) topBack.addEventListener('click', function () { setScreen('order'); refreshTotal(); loadBootstrap().then(function () { if (S.screen === 'order') { render(); refreshTotal(); } }).catch(function () {}); });
+  if (topBack) topBack.addEventListener('click', function () { if (S.screen === 'detail' || S.screen === 'cancel') { S.cancel = null; setScreen('my'); return; } setScreen('order'); refreshTotal(); loadBootstrap().then(function () { if (S.screen === 'order') { render(); refreshTotal(); } }).catch(function () {}); });
 
   // แผ่นรายละเอียดสินค้าอยู่นอก #app (วาดหน้าใหม่แล้วไม่หาย) จึงมีตัวฟังเหตุการณ์ของตัวเอง
   document.addEventListener('click', function (ev) {
@@ -1162,13 +1273,32 @@
     else if (act === 'edit-inc') { S.edit.qty += 1; keepScroll(); }
     else if (act === 'edit-cancel') { S.edit = null; keepScroll(); }
     else if (act === 'edit-save') saveEdit(t.getAttribute('data-k'));
-    else if (act === 'cancel-ask') { S.edit = null; S.confirmCancel = t.getAttribute('data-k'); var y1 = window.scrollY; render(); window.scrollTo(0, y1); }
+    else if (act === 'cancel-ask') { openCancel(t.getAttribute('data-code'), t.getAttribute('data-k')); }
+    else if (act === 'detail-back' || act === 'cx-back') { S.cancel = null; setScreen('my'); }
+    else if (act === 'cx-toggle') { S.cancel.sel[t.getAttribute('data-k')] = !!t.checked; keepScroll(); }
+    else if (act === 'cx-all') {
+      var onAll = !!t.checked; S.cancel.sel = {};
+      lotMine(S.cancel.code).filter(function (o) { return isLive(o) && o.canCancel; }).forEach(function (o) { if (onAll) S.cancel.sel[qtyKey(o.productId, o.option)] = true; });
+      keepScroll();
+    }
+    else if (act === 'cx-reason') { S.cancel.reason = CANCEL_REASONS[Number(t.getAttribute('data-i'))]; keepScroll(); }
+    else if (act === 'cx-submit') submitCancel();
     else if (act === 'cancel-no') { S.confirmCancel = ''; var y2 = window.scrollY; render(); window.scrollTo(0, y2); }
     else if (act === 'cancel-yes') cancelLine(t.getAttribute('data-k'));
     else if (act === 'my') showMy();
     else if (act === 'reload') location.reload();
     else if (act === 'recheck') location.reload();
   });
+  // แตะหัวการ์ด Lot (ยกเว้นลูกศรขวา/ป้ายสถานะ) = เปิดหน้ารายละเอียดออเดอร์ ลูกศรขวายังใช้ย่อ/ขยายเหมือนเดิม
+  app.addEventListener('click', function (ev) {
+    var sm = ev.target.closest('details.group[data-scope="my"] > summary');
+    if (!sm || ev.target.closest('[data-act]')) return;
+    var r = sm.getBoundingClientRect();
+    if (ev.clientX >= r.right - 56) return;
+    ev.preventDefault();
+    openDetail(sm.parentNode.getAttribute('data-code'));
+  });
+  app.addEventListener('input', function (ev) { if (ev.target.id === 'cx-other' && S.cancel) S.cancel.other = ev.target.value; });
   app.addEventListener('submit', function (ev) {
     if (ev.target.id === 'regform') { ev.preventDefault(); submitRegister(ev.target); }
   });

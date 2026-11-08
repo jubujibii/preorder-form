@@ -624,7 +624,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? ' · ' + baht(lotSatang) : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? ' · <strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -659,7 +659,7 @@
             '<span class="badge ' + (b.refund.paid ? 'ok' : 'warn') + '">' + (b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน') + '</span></div>' +
             (b.refund.paid ? (b.refund.at ? '<div class="ref-note">คืนเงินเมื่อ ' + esc(closeText(b.refund.at)) + '</div>' : '') : '<div class="ref-note">ร้านค้าจะคืนเงินเข้าบัญชีที่แจ้งไว้ โดยวันที่คืนเงินจะแสดงที่นี่เมื่อดำเนินการแล้ว</div>') + '</div>';
         }
-        function thumb(o) { var u = o.optionImageUrl || o.imageUrl; return u ? '<img class="pimg my-pimg" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
+        function thumb(o) { var u = o.imageUrl; return u ? '<img class="pimg my-pimg" src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : ''; }
         // สินค้าเดียวกัน (คนละสี/ขนาด) ให้อยู่ติดกัน: เรียงกลุ่มสินค้าตามรายการล่าสุด แล้วในกลุ่มใหม่ไปเก่า
         function cluster(list) {
           var latest = {};
@@ -680,7 +680,7 @@
           var unit = o.priceThb != null ? o.priceThb : null;
           var badgeTxt = S.myTab !== 'all' ? '' : '<span class="badge stage s-' + stageOf(o) + '">' + esc(o.status === 'รับออเดอร์' ? labelOf[stageOf(o)] : o.status) + '</span>';
           html += '<div class="my-line' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (multi ? ' in-cluster' : '') + '">' +
-            '<div class="line-name' + (!multi && (o.optionImageUrl || o.imageUrl) ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? (o.optionImageUrl ? '<img class="pimg opt-img" src="' + esc(o.optionImageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : '<span class="ln-txt">' + esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '') + '</span>') + '</div>' +
+            '<div class="line-name' + (!multi && o.imageUrl ? ' with-img' : '') + '">' + (multi ? '' : thumb(o)) + (multi ? '<span class="opt-tag alone">' + esc(o.option) + '</span> <span class="unit-inline">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span>' : '<span class="ln-txt">' + esc(o.productName) + (o.option ? ' <span class="opt-tag">' + esc(o.option) + '</span>' : '') + '</span>') + '</div>' +
             '<div class="line-right">' + (unit != null ? '<strong class="line-total">' + baht(unit * o.qty * 100) + '</strong>' : '') + badgeTxt + '</div>' +
             '<div class="line-unit">' + (multi ? '' : (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty)) + '</div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
@@ -695,7 +695,6 @@
           }
           html += '</div>';
         });
-        if (lotSatang > 0 && S.myTab !== 'refund') html += '<div class="lot-total"><span>รวมค่าสินค้า <small>ยังไม่รวมค่าส่ง</small></span><strong>' + baht(lotSatang) + '</strong></div>';
         html += '</details>';
       });
         return html;

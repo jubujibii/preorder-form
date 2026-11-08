@@ -393,6 +393,10 @@
       '<output aria-live="off">' + q + '</output>' +
       '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';
   }
+  // ยอดค่าสินค้าของสินค้านี้ตามที่เลือกไว้ (รวมทุกตัวเลือก ตามราคาของแต่ละตัวเลือก)
+  function productTotalSatang(p) {
+    return (p.options.length ? p.options : ['']).reduce(function (n, o) { return n + (S.qty[qtyKey(p.productId, o)] || 0) * unitPriceThb(p, o) * 100; }, 0);
+  }
   function productCount(p) {
     return (p.options.length ? p.options : ['']).reduce(function (n, o) { return n + (S.qty[qtyKey(p.productId, o)] || 0); }, 0);
   }
@@ -441,6 +445,7 @@
       (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
       (opts.length > 1 ? '<p class="sh-hint">แตะตัวเลือกเพื่อดูรูป · เลือกได้หลายตัวเลือกพร้อมกัน</p>' : '') +
       '<div class="variants">' + opts.map(function (o, oi) { return variantRow(p, o, oi, hasOptImg); }).join('') + '</div>' +
+      '<div class="sh-total"' + (productTotalSatang(p) > 0 ? '' : ' hidden') + '><span>รวมสินค้านี้</span><strong id="sh-total">' + baht(productTotalSatang(p)) + '</strong></div>' +
       '<button type="button" class="btn primary block" data-act="close-sheet">เสร็จสิ้น</button></div></div>';
   }
   function openSheet(pid) {
@@ -617,7 +622,9 @@
         var live = mine.filter(function (o) { return o.status !== 'ยกเลิก'; });
         var dead = mine.filter(function (o) { return o.status === 'ยกเลิก'; });
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
+        // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
+        var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? ' · ' + baht(lotSatang) : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -688,6 +695,7 @@
           }
           html += '</div>';
         });
+        if (lotSatang > 0 && S.myTab !== 'refund') html += '<div class="lot-total"><span>รวมค่าสินค้า <small>ยังไม่รวมค่าส่ง</small></span><strong>' + baht(lotSatang) + '</strong></div>';
         html += '</details>';
       });
         return html;
@@ -750,6 +758,8 @@
     var p = productsById().get(k.split('\u0001')[0]);
     if (p) {
       var n = productCount(p);
+      var shT = document.getElementById('sh-total');
+      if (shT && S.sheet === p.productId) { shT.textContent = baht(productTotalSatang(p)); shT.parentNode.hidden = !(n > 0); }
       Array.prototype.forEach.call(document.querySelectorAll('.pcard[data-p="' + p.productId.replace(/"/g, '\\"') + '"]'), function (card) {
         card.classList.toggle('has', n > 0);
         var b = card.querySelector('.pc-btn');

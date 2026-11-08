@@ -397,7 +397,7 @@
   }
   function variantRow(p, o, oi, hasOptImg) {
     var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
-    return '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '" data-oi="' + oi + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + (priceBounds(p).lo !== priceBounds(p).hi ? ' <small class="opt-price">' + baht(unitPriceThb(p, o) * 100) + '</small>' : '') + '</span>' +
+    return '<div class="variant' + (q ? ' has' : '') + (oimg ? ' with-img' : '') + '" data-k="' + esc(k) + '" data-oi="' + oi + '"><span class="variant-name">' + (oimg ? '<img class="pimg opt-img" src="' + esc(oimg) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : (hasOptImg ? '<span class="opt-img opt-img-blank" aria-hidden="true"></span>' : '')) + (o ? esc(o) : 'จำนวน') + '</span>' + (priceBounds(p).lo !== priceBounds(p).hi ? '<small class="opt-price col">' + baht(unitPriceThb(p, o) * 100) + '</small>' : '') +
       '<span class="stepper"><button type="button" data-act="dec" data-k="' + esc(k) + '" aria-label="ลด ' + esc(p.name + ' ' + o) + '"' + (q <= 0 ? ' disabled' : '') + '>−</button>' +
       '<output aria-live="off">' + q + '</output>' +
       '<button type="button" data-act="inc" data-k="' + esc(k) + '" aria-label="เพิ่ม ' + esc(p.name + ' ' + o) + '"' + (q >= MAX_QTY ? ' disabled' : '') + '>+</button></span></div>';

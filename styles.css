@@ -1028,3 +1028,16 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 /* ราคาตัวเลือก: คอลัมน์ตรงกันทุกแถว */
 .variant-name { flex: 1 1 auto; }
 .variant .opt-price.col { flex: none; width: 52px; margin: 0 6px 0 8px; text-align: right; white-space: nowrap; font-size: 14px; }
+
+.pay-split { margin: -2px 0 8px; font-size: 14px; color: var(--muted); }
+.pay-split > div { display: flex; justify-content: space-between; padding: 2px 0; }
+.pay-split b { color: var(--ink); font-weight: 600; }
+
+/* รูปหลักหลายรูป: ปัดซ้าย-ขวา */
+.sh-strip { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.sh-strip::-webkit-scrollbar { display: none; }
+.sh-strip[hidden], .sh-dots[hidden] { display: none; }
+.sh-strip .pimg { flex: none; width: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+.sh-dots { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+.sh-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(0, 0, 0, .25); box-shadow: 0 0 0 1px rgba(255, 255, 255, .6); }
+.sh-dots i.on { background: var(--accent-dark); }

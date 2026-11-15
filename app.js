@@ -79,6 +79,7 @@
       { isNew: true, orders: 4, productId: '011126-P01', preorderCode: '011126', name: 'ปิดก่อน', priceThb: 50, options: [], closeAt: new Date(Date.now() + 2 * 86400000).toISOString() },
     ];
     if (params.get('desc') && products[0]) products[0].description = 'ผ้านุ่มหนา ซักเครื่องได้\nขนาด 60 × 45 ซม. เหมาะกับแมวน้ำหนักไม่เกิน 6 กก.\nสีอาจต่างจากภาพเล็กน้อย';
+    if (params.get('multiimg') && products[0]) products[0].imageUrls = [products[0].imageUrl, 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#e8b4a0"/><text x="300" y="210" font-size="40" text-anchor="middle">รูปที่ 2</text></svg>'), 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#c9d6a3"/><text x="300" y="210" font-size="40" text-anchor="middle">รูปที่ 3</text></svg>')];
     if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
     var res;
     products.forEach(function (x) { x.category = /นอน/.test(x.name) ? 'ที่นอน' : /ของเล่น/.test(x.name) ? 'ของเล่น' : 'อาหาร'; });
@@ -443,12 +444,27 @@
       '<div class="pc-sub">' + (opts.length > 1 ? opts.length + ' ตัวเลือก' : '') + '</div>' +
       '<div class="pc-foot"><span class="pc-price">' + priceLabel(p) + '</span>' + ctl + '</div></div>';
   }
+  // รูปหลักหลายรูป: ปัดซ้าย-ขวา + จุดบอกหน้า (รูปเดียวแสดงเหมือนเดิม)
+  function shImages(p) {
+    var u = p.imageUrls || [];
+    if (u.length > 1) {
+      return '<div class="sh-strip">' + u.map(function (s) { return '<img class="pimg" src="' + esc(s) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer" loading="lazy">'; }).join('') + '</div>' +
+        '<div class="sh-dots">' + u.map(function (_, i) { return '<i' + (i === 0 ? ' class="on"' : '') + '></i>'; }).join('') + '</div>';
+    }
+    return p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '';
+  }
+  document.addEventListener('scroll', function (e) {
+    var t = e.target;
+    if (!t || !t.classList || !t.classList.contains('sh-strip')) return;
+    var i = Math.round(t.scrollLeft / Math.max(t.clientWidth, 1)), ds = t.parentNode.querySelectorAll('.sh-dots i');
+    Array.prototype.forEach.call(ds, function (d, k) { d.classList.toggle('on', k === i); });
+  }, true);
   function sheetHtml(pid) {
     var p = productsById().get(pid);
     if (!p) return '';
     var opts = p.options.length ? p.options : [''], hasOptImg = (p.optionImages || []).some(Boolean);
     return '<div class="sheet-ov" data-act="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '" tabindex="-1" data-p="' + esc(pid) + '"><div class="sh-top"><div class="sheet-grip"></div>' +
-      '<div class="sh-img"><div class="sh-img-in">' + (p.imageUrl ? '<img class="pimg" src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" referrerpolicy="no-referrer">' : '') + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
+      '<div class="sh-img"><div class="sh-img-in">' + shImages(p) + '</div><span class="sh-cap" id="sh-cap" hidden></span></div>' +
       '<div class="sh-head"><span class="name">' + esc(p.name) + '</span><span class="price">' + priceLabel(p) + '</span>' + shareBtn('share-menu', 'data-type="p" data-id="' + esc(pid) + '"', 'แชร์สินค้า') + '</div></div>' +
       '<div class="sh-meta">Lot ' + esc(p.preorderCode) + ' · ปิดรับ ' + esc(closeText(p.closeAt)) + closeBadge(p.closeAt) + '</div>' +
       (p.description ? '<details class="pdesc"><summary>รายละเอียดสินค้า</summary><p>' + esc(p.description) + '</p></details>' : '') +
@@ -477,8 +493,15 @@
     var sh = row.closest('.sheet'), p = sh && productsById().get(sh.getAttribute('data-p'));
     if (!p) return;
     var oi = Number(row.getAttribute('data-oi')), src = (p.optionImages || [])[oi] || p.imageUrl || '';
-    var box = sh.querySelector('.sh-img-in'), img = box.querySelector('img');
-    if (src) {
+    var box = sh.querySelector('.sh-img-in'), strip = box.querySelector('.sh-strip'), img = box.querySelector(strip ? 'img.opt-one' : 'img');
+    if (strip) {
+      var os = (p.optionImages || [])[oi] || '', dots = box.querySelector('.sh-dots');
+      strip.hidden = !!os; if (dots) dots.hidden = !!os;
+      if (os) {
+        if (!img) { img = document.createElement('img'); img.className = 'pimg opt-one'; img.setAttribute('referrerpolicy', 'no-referrer'); box.appendChild(img); }
+        img.style.display = ''; img.alt = p.name; img.src = os;
+      } else if (img) img.style.display = 'none';
+    } else if (src) {
       if (!img) { img = document.createElement('img'); img.className = 'pimg'; img.setAttribute('referrerpolicy', 'no-referrer'); box.appendChild(img); }
       img.style.display = ''; img.alt = p.name; img.src = src;
     } else if (img) img.style.display = 'none';
@@ -643,7 +666,8 @@
             var sk = code + '|' + x[2];
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
             html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งจีน</small>' : '') + '</div>' + badge + '</div>' +
-              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>';
+              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' +
+              (x[2] === 1 && lotSatang > 0 && r.totalSatang > lotSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(lotSatang) + '</b></div><div><span>ค่าส่งจีน</span><b>' + baht(r.totalSatang - lotSatang) + '</b></div></div>' : '');
             if (!r.paid) {
               var busy = S.slipBusy === sk;
               if (S.slipErr[sk] && !busy) html += '<div class="slip-fail" role="alert"><strong>⚠ แนบสลิปไม่สำเร็จ</strong><span>' + esc(S.slipErr[sk]) + '</span><span class="small">สลิปยังไม่ถูกส่งถึงร้าน กดแนบสลิปอีกครั้ง หรือติดต่อแอดมิน</span></div>';

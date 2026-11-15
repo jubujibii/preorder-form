@@ -724,7 +724,7 @@
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;
       html += '<nav class="stickytabs" role="tablist" aria-label="หมวดออเดอร์">' + ['all', 'pay', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'].map(function (k) {
-          var n = k === 'refund' ? refundPending : counts[k];
+          var n = k === 'all' ? 0 : k === 'refund' ? refundPending : counts[k]; // ทั้งหมด ไม่แสดงเลข
           return '<button type="button" role="tab" class="st' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (n ? '<span class="st-n">' + n + '</span>' : '') + '</button>';
         }).join('') + '</nav>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);

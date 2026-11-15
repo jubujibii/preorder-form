@@ -103,6 +103,11 @@
     var lv = lotMine(code).filter(isLive); // จ่ายรอบ 1 แล้วแต่ร้านยังไม่สั่งของ = รอสั่งของ
     return lv.length && lv.every(function (o) { return o.status === 'รับออเดอร์'; }) ? 'รอสั่งของ' : 'รอแจ้งยอดรอบ 2';
   }
+  // ป้ายคืนเงิน: ร้านโอนคืนแล้ว = คืนเงินแล้ว, ยังไม่โอน = รอร้านโอนคืน (ตรงกับรายการในแท็บคืนเงิน)
+  function refundLabel(code) {
+    var b = ((S.my && S.my.billing) || []).filter(function (x) { return x.preorderCode === code; })[0];
+    return b && b.refund && b.refund.paid ? 'คืนเงินแล้ว' : 'รอร้านโอนคืน';
+  }
   function lotPaid(billing, code) {
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
     return !!(b && b.round1 && b.round1.paid);
@@ -214,7 +219,7 @@
     var onDetail = S.screen === 'detail' && S.detailCode && S.my;
     if (onDetail && ttl) ttl.textContent = 'Lot ' + S.detailCode;
     memberEl.hidden = onDetail ? false : !S.memberCode;
-    memberEl.textContent = onDetail ? lotStageLabel(S.detailCode) : S.memberCode;
+    memberEl.textContent = onDetail ? (S.detailTab === 'cancel' ? 'ยกเลิกแล้ว' : S.detailTab === 'refund' ? refundLabel(S.detailCode) : lotStageLabel(S.detailCode)) : S.memberCode;
     memberEl.classList.toggle('is-stage', !!onDetail);
     if (S.screen !== 'order' && S.sheet) closeSheet();
     var fn = SCREENS[S.screen] || SCREENS.error;
@@ -442,7 +447,9 @@
     document.body.appendChild(m);
     var r = btn.getBoundingClientRect();
     m.style.top = Math.min(r.bottom + 6, window.innerHeight - m.offsetHeight - 8) + 'px';
-    m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    // ชิดขอบปุ่มด้านที่มีที่ว่าง ไม่ให้เมนูล้นจอ (ปุ่มแชร์ Lot อยู่ทางซ้าย)
+    var left = r.right - m.offsetWidth < 8 ? r.left : r.right - m.offsetWidth;
+    m.style.left = Math.max(8, Math.min(left, window.innerWidth - m.offsetWidth - 8)) + 'px'; m.style.right = 'auto';
   }
   document.addEventListener('click', function (ev) {
     var m = document.getElementById('share-menu');
@@ -831,11 +838,13 @@
       if (!d) return SCREENS.loading();
       var mine = lotMine(code), live = mine.filter(isLive), ended = !live.length;
       if (!mine.length) return '<p class="muted center">ไม่พบรายการของ Lot นี้</p><button class="btn block" data-act="detail-back">กลับ</button>';
-      if (ended) live = mine; // Lot ที่ยกเลิก/คืนเงินทั้งหมด: ยังแสดงรายการ (ขีดฆ่า) แต่ไม่นับยอด
+      var deadTab = S.detailTab === 'cancel' ? 'ยกเลิก' : S.detailTab === 'refund' ? 'คืนเงิน' : '';
+      if (deadTab && mine.some(function (o) { return o.status === deadTab; })) { live = mine.filter(function (o) { return o.status === deadTab; }); ended = true; } // เปิดจากแท็บยกเลิก/คืนเงิน: แสดงเฉพาะรายการที่ยกเลิก/คืนเงิน
+      else { deadTab = ''; if (ended) live = mine; } // Lot ที่ยกเลิก/คืนเงินทั้งหมด: ยังแสดงรายการ (ขีดฆ่า) แต่ไม่นับยอด
       var pieces = 0, total = 0, prods = {};
-      live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null && !ended) total += o.priceThb * o.qty * 100; });
+      live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null && (!ended || deadTab)) total += o.priceThb * o.qty * 100; });
       var bd = (d.billing || []).filter(function (x) { return x.preorderCode === code; })[0];
-      if (!ended && bd && bd.round1 && bd.round1.totalSatang > 0) total = bd.round1.totalSatang; // รวมค่าส่งจีน
+      if (!ended && !deadTab && bd && bd.round1 && bd.round1.totalSatang > 0) total = bd.round1.totalSatang; // รวมค่าส่งจีน
       var me = d.customer;
       var rows = live.map(function (o) {
         var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
@@ -846,8 +855,8 @@
             '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(qtyKey(o.productId, o.option)) + '" data-code="' + esc(code) + '" data-label="' + esc(o.option || o.productName) + '" aria-label="ลบรายการนี้">' + TRASH_ICON + '</button></div>' : '') + '</div>';
       }).join('');
       return (function () { var t = lotTimeline(live, lotPaid(d.billing, code)); return t ? '<section class="dcard dtl">' + t + '</section>' : ''; })() +
-        '<section class="dcard"><h2 class="dtitle">รายการสินค้า (' + live.length + ' รายการ)</h2>' + rows +
-        '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(total) + '</strong></span></div></section>' +
+        '<section class="dcard"><h2 class="dtitle">' + (deadTab === 'ยกเลิก' ? 'รายการที่ยกเลิก' : deadTab ? 'รายการที่คืนเงิน' : 'รายการสินค้า') + ' (' + live.length + ' รายการ)</h2>' + rows +
+        '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">' + (deadTab === 'ยกเลิก' ? 'ยอดที่ยกเลิก' : deadTab ? 'ยอดที่คืนเงิน' : 'ยอดรวม') + ' <strong>' + baht(total) + '</strong></span></div></section>' +
         (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +
           '<div class="dgrid">' + (me.recipientName ? '<span class="sub">ผู้รับ</span><span>' + esc(me.recipientName) + '</span>' : '') + (me.phone ? '<span class="sub">เบอร์โทร</span><span>' + esc(me.phone) + '</span>' : '') + (me.address ? '<span class="sub">ที่อยู่</span><span>' + esc(me.address) + '</span>' : '') + '</div>' +
           '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
@@ -1019,13 +1028,13 @@
   }
   function lotStageLabel(code) {
     var d = S.my, all0 = lotMine(code), mine = all0.filter(isLive);
-    if (d && all0.length && !mine.length) return all0.every(function (o) { return o.status === 'คืนเงิน'; }) ? 'คืนเงินแล้ว' : 'ยกเลิกแล้ว';
+    if (d && all0.length && !mine.length) return all0.every(function (o) { return o.status === 'คืนเงิน'; }) ? refundLabel(code) : 'ยกเลิกแล้ว';
     if (!d || !mine.length) return '';
     var st = paymentStateByPreorder(d.billing)[code] || lineTab(mine[0], d.billing), lab = {};
     ORDER_TABS.forEach(function (t) { lab[t.key] = t.label; });
     return stageTagLabel(st, lab[st] || '', d.billing, code);
   }
-  function openDetail(code) { if (S.screen === 'my') S.myScrollY = window.scrollY; S.detailCode = code; setScreen('detail'); }
+  function openDetail(code) { if (S.screen === 'my') { S.myScrollY = window.scrollY; S.detailTab = S.myTab; } S.detailCode = code; setScreen('detail'); }
   function openEdit(code) {
     var qty = {}, orig = {};
     lotMine(code).filter(function (o) { return isLive(o) && o.canCancel; }).forEach(function (o) { var k = qtyKey(o.productId, o.option); qty[k] = o.qty; orig[k] = o.qty; });

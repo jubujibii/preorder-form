@@ -1186,3 +1186,8 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .member.is-stage{background:#dde9fb;color:#1d4f91;font-weight:600}
 .dgrid{display:grid;grid-template-columns:84px 1fr;gap:6px 12px;font-size:15px;line-height:1.5}
 .dgrid .sub{color:var(--muted,#8c7a6d)}
+
+/* ชื่อหน้าชิดซ้ายถัดจากปุ่มย้อนกลับ ตาม Design (ไม่มีรอยเท้า) */
+body[data-screen="my"] .top-title, body[data-screen="detail"] .top-title, body[data-screen="cancel"] .top-title, body[data-screen="edit"] .top-title { justify-content: flex-start; margin-left: -4px; }
+body[data-screen="my"] .top-title::before { display: none; }
+body[data-screen="my"] .top-title { margin-left: -8px; }

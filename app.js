@@ -722,11 +722,21 @@
           '<span class="tile-txt"><span class="tile-label">' + esc(labelOf[k]) + '</span>' + (big && dueSatang > 0 ? '<span class="tile-sub">ต้องโอน <b>' + baht(dueSatang) + '</b></span>' : '') + '</span></button>';
       }
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
-      var moreOpen = S.myMore;
-      html += '<nav class="stickytabs" role="tablist" aria-label="หมวดออเดอร์">' + ['all', 'pay', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'].map(function (k) {
-          var n = k === 'all' ? 0 : k === 'refund' ? refundPending : counts[k]; // ทั้งหมด ไม่แสดงเลข
-          return '<button type="button" role="tab" class="st' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (n ? '<span class="st-n">' + n + '</span>' : '') + '</button>';
-        }).join('') + '</nav>';
+      // "การซื้อของฉัน": แบนเนอร์ที่ต้องชำระ (ขึ้นเมื่อมียอดค้าง/สลิปรอตรวจ) + ปุ่มกล่อง 3 ใบ; ดูเพิ่มเติม = ทั้งหมด/สำเร็จ/คืนเงิน/ยกเลิก
+      var dueIso = '';
+      d.billing.forEach(function (b) { [b.round1, b.round2].forEach(function (r) { if (r && !r.paid && !r.slipAt && r.dueAt && (!dueIso || r.dueAt < dueIso)) dueIso = r.dueAt; }); });
+      var moreOpen = S.myMore || ['all', 'done', 'refund', 'cancel'].indexOf(S.myTab) >= 0;
+      var payShown = counts.pay > 0 || counts.verify > 0;
+      function bbTile(k) {
+        return '<button type="button" role="tab" class="bb-tile' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + (counts[k] ? '<span class="bb-n">' + counts[k] + '</span>' : '') + ICONS[k] + '<span>' + esc(labelOf[k]) + '</span></button>';
+      }
+      html += '<section class="buyblock" aria-label="การซื้อของฉัน"><div class="bb-head"><h2>การซื้อของฉัน</h2><button type="button" class="bb-more" data-act="more-tabs" aria-expanded="' + moreOpen + '">' + (moreOpen ? 'ย่อ' : 'ดูเพิ่มเติม') + ' <span aria-hidden="true">' + (moreOpen ? '‹' : '›') + '</span></button></div>' +
+        (payShown ? '<button type="button" role="tab" class="bb-pay' + (S.myTab === 'pay' ? ' active' : '') + '" aria-selected="' + (S.myTab === 'pay') + '" data-act="tab" data-tab="pay"><span class="bb-pay-ic">' + ICONS.pay + '</span><span class="bb-pay-txt"><b>ที่ต้องชำระ</b><small>' + (dueSatang > 0 ? '<strong>' + baht(dueSatang) + '</strong>' + (dueIso ? ' · ภายใน ' + esc(dueText(dueIso).replace(/ \d{1,2}:\d{2} น\.$/, '')) : '') : 'สลิปรอร้านตรวจสอบ') + '</small></span><span class="bb-chev" aria-hidden="true">›</span></button>' : '') +
+        '<div class="bb-tiles" role="tablist">' + bbTile('new') + bbTile('ship') + bbTile('inbound') + '</div>' +
+        (moreOpen ? '<div class="bb-chips" role="tablist">' + ['all', 'done', 'refund', 'cancel'].map(function (k) {
+          var n = k === 'refund' ? refundPending : 0;
+          return '<button type="button" role="tab" class="bb-chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (n ? '<span class="bb-chip-n">' + n + '</span>' : '') + '</button>';
+        }).join('') + '</div>' : '') + '</section>';
       var shown = filterMyOrders(merged, d.billing, S.myTab);
       var STAGE_ORDER = ['pay', 'verify', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'];
       var payState = paymentStateByPreorder(d.billing);

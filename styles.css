@@ -1205,3 +1205,10 @@ body[data-screen="my"] .top-title { margin-left: -8px; }
 .pay-round .pay-note { margin: 0 0 10px; }
 .billbox > .pay-round:first-child { border-top: 0; padding-top: 0; }
 .billbox { padding-top: 14px; }
+
+/* หน้ารายละเอียด: กล่องยอดโอน/บัญชี/แนบสลิป (รอบที่ยังไม่จ่าย) */
+.dpay .billbox { margin: 0; }
+
+/* กำหนดโอน: บรรทัดเรียบ มีไอคอนนาฬิกา ไม่ใช้ป้ายสีเหลือง (ตาม Design ใหม่) */
+.pay-due { display: flex; align-items: center; gap: 6px; margin: -2px 0 10px; padding: 0; border-radius: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 500; }
+.pay-due::before { content: ''; width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; }

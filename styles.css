@@ -1143,3 +1143,20 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .group[data-scope="my"] > summary .g-tags { grid-column: 2; grid-row: 1 / span 2; align-self: center; justify-self: end; max-width: 170px; }
 .group[data-scope="my"] > summary .g-tags .stage { white-space: nowrap; }
 .drow .dact .ibtn.edit:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ปุ่มแนบสลิปเป็นปุ่มหลักสีส้มเข้มตามดีไซน์ */
+.slip-btn { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-deep); min-height: 48px; font-size: 16px; font-weight: 700; }
+.slip-btn.is-busy { opacity: .8; }
+
+/* ลูกศรบรรทัดสรุป: วงกลมสีส้มอ่อน ไอคอนเส้นบางชัด (แทนตัวอักษร ›) */
+.sumline .chev { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-deep); font-size: 0; }
+.sumline .chev svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ===== หน้าว่างตามดีไซน์: วงกลมสีมีไอคอน (แทนมาสคอต) ===== */
+.empty::before { display: none !important; content: none !important; }
+.empty { padding-top: 40px; }
+.es-ic { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-deep); margin-bottom: 6px; }
+.es-ic svg { width: 52px; height: 52px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.es-ic.es-pay { background: #e6efdc; color: var(--ok); }
+.es-ic.es-verify, .es-ic.es-done { background: var(--tag); color: var(--accent-deep); }
+.es-ic.es-ship, .es-ic.es-inbound { background: #dfeaee; color: #3d5a66; }

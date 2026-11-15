@@ -44,8 +44,21 @@
   function secHead(title, dot, note, count) {
     return (count > 1 ? '<h2 class="tab-title"><span class="tab-dot ' + dot + '"></span>' + esc(title) + '</h2>' : '') + '<p class="small muted sec-note">' + note + '</p>';
   }
-  function emptyBlock(title, sub) {
-    return '<div class="center empty"><h2 class="es-t">' + esc(title) + '</h2>' + (sub ? '<p class="es-s">' + esc(sub) + '</p>' : '') + '</div>';
+  // ไอคอนวงกลมสีตามแท็บ (ตรงกับหน้าว่างใน Design)
+  var EMPTY_ICONS = {
+    all: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h4"/>',
+    pay: '<circle cx="12" cy="12" r="9"/><path d="M7.5 12.5l3 3 6-7"/>',
+    verify: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    'new': '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/>',
+    ship: '<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+    inbound: '<path d="M2 7h12v9H2zM14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
+    done: '<path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.8L12 3z"/>',
+    refund: '<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/>',
+    cancel: '<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8M16 8l-8 8"/>'
+  };
+  function emptyBlock(title, sub, kind) {
+    var ic = EMPTY_ICONS[kind] ? '<div class="es-ic es-' + kind + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + EMPTY_ICONS[kind] + '</svg></div>' : '';
+    return '<div class="center empty">' + ic + '<h2 class="es-t">' + esc(title) + '</h2>' + (sub ? '<p class="es-s">' + esc(sub) + '</p>' : '') + '</div>';
   }
   // เส้นไทม์ไลน์ 4 ขั้นของ Lot: ขั้นที่ช้าที่สุดของรายการที่ยังไม่ถูกคืนเงิน; ชำระรอบ 1 แล้วแต่ร้านยังไม่สั่งของ (รับออเดอร์) = ยังไม่ถึงขั้นแรก; ยังไม่ชำระ = ไม่แสดง
   function lotTimeline(live, paid) {
@@ -82,6 +95,7 @@
     return pick ? '<span class="g-tags"><span class="stage s-ship">' + esc(LAB[pick]) + '</span></span>' : '';
   }
   function stageTagLabel(key, label, billing, code) {
+    if (key === 'new') return label + ' รอบ 1';
     if (key !== 'ship') return label;
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
     return b && b.round2 ? label : 'รอแจ้งยอดรอบ 2';
@@ -183,7 +197,13 @@
   }
 
   // ---------- หน้าจอ ----------
-  function setScreen(name) { S.screen = name; S.error = ''; S.notice = ''; render(); window.scrollTo(0, 0); }
+  // กลับจากหน้ารายละเอียด/แก้ไขมาหน้าออเดอร์: คืนตำแหน่งที่เลื่อนไว้ (ไม่เด้งขึ้นบนสุด)
+  function setScreen(name) {
+    var restore = name === 'my' && (S.screen === 'detail' || S.screen === 'edit') && S.myScrollY != null ? S.myScrollY : null;
+    S.screen = name; S.error = ''; S.notice = ''; render();
+    window.scrollTo(0, restore != null ? restore : 0);
+    if (restore != null && name === 'my') { /* คงค่าไว้จนกว่าจะเปิดหน้ารายละเอียดครั้งต่อไป */ } else if (name !== 'detail' && name !== 'edit') S.myScrollY = null;
+  }
 
   function render() {
     document.body.setAttribute('data-screen', S.screen);
@@ -192,7 +212,19 @@
     memberEl.textContent = S.memberCode;
     if (S.screen !== 'order' && S.sheet) closeSheet();
     var fn = SCREENS[S.screen] || SCREENS.error;
+    var prevTabs = app.querySelector('.stickytabs'), prevLeft = prevTabs ? prevTabs.scrollLeft : null;
     app.innerHTML = fn();
+    var navTabs = app.querySelector('.stickytabs');
+    if (navTabs) {
+      var actChip = navTabs.querySelector('.st.active');
+      if (prevLeft != null) navTabs.scrollLeft = prevLeft;
+      if (actChip) {
+        var cl = actChip.offsetLeft, cr = cl + actChip.offsetWidth;
+        if (prevLeft == null) navTabs.scrollLeft = cl - (navTabs.clientWidth - actChip.offsetWidth) / 2;
+        else if (cl < navTabs.scrollLeft + 12) navTabs.scrollLeft = cl - 16;
+        else if (cr > navTabs.scrollLeft + navTabs.clientWidth - 12) navTabs.scrollLeft = cr - navTabs.clientWidth + 16;
+      }
+    }
     if (S.screen === 'order' || S.screen === 'my') app.insertAdjacentHTML('beforeend', tabbarHtml(S.screen));
     document.body.classList.remove('st-on');
     var hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr-h', hd.offsetHeight + 'px');
@@ -657,7 +689,7 @@
       var d = S.my;
       var html = '<h1 class="sr-only">ออเดอร์ของฉัน</h1>' + errBanner();
       if (!d) return html + SCREENS.loading();
-      if (!d.orders.length) return html + '' + emptyBlock('ยังไม่มีออเดอร์', 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย ออเดอร์ที่สั่งแล้วจะมาอยู่ที่นี่') + '<button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
+      if (!d.orders.length) return html + '' + emptyBlock('ยังไม่มีออเดอร์', '', 'all') + '<button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var merged = mergeOrderLines(d.orders);
       var counts = tabCounts(merged, d.billing);
       if (!S.myTab) S.myTab = (counts.pay > 0 || counts.verify > 0) ? 'pay' : counts.new > 0 ? 'new' : counts.ship > 0 ? 'ship' : counts.inbound > 0 ? 'inbound' : 'all';
@@ -710,7 +742,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : (S.myTab === 'ship' || S.myTab === 'inbound' ? statusTag(live) : '')) + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' || S.myTab === 'new' ? stageTags(mine, code) : (S.myTab === 'ship' || S.myTab === 'inbound' ? statusTag(live) : '')) + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -753,19 +785,18 @@
         // การ์ด Lot เป็นภาพรวม: บรรทัดสรุปสินค้า แตะแล้วไปหน้ารายละเอียด (รายการเต็มและปุ่มแก้ไข/ลบอยู่ที่หน้ารายละเอียด)
         var sumRows = live.length ? live : mine, prodNames = [], seenP = {};
         sumRows.forEach(function (o) { if (!seenP[o.productId]) { seenP[o.productId] = 1; prodNames.push(o); } });
-        var firstP = prodNames[0], optCount = sumRows.filter(function (o) { return o.productId === firstP.productId; }).length;
-        var sumText = firstP.productName + (optCount === 1 && firstP.option ? ' · ' + firstP.option : '') + (prodNames.length > 1 ? ' และอีก ' + (prodNames.length - 1) + ' รายการ' : (optCount > 1 ? ' และอีก ' + (optCount - 1) + ' ตัวเลือก' : ''));
-        html += '<button type="button" class="sumline' + (live.length ? '' : ' is-ended') + '" data-act="open-detail" data-code="' + esc(code) + '"><span>' + esc(sumText) + '</span><span class="chev" aria-hidden="true">›</span></button>';
+        var sumText = 'ดูรายละเอียด · ' + prodNames.length + ' รายการ';
+        html += '<button type="button" class="sumline' + (live.length ? '' : ' is-ended') + '" data-act="open-detail" data-code="' + esc(code) + '"><span>' + esc(sumText) + '</span><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>';
         html += '</details>';
       });
         return html;
       }
-      var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง/จัดส่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์' };
-      var emptySub = { pay: 'เมื่อร้านแจ้งยอดโอนรอบ 1 หรือรอบ 2 ยอดจะขึ้นที่นี่ พร้อมปุ่มแนบสลิป', verify: 'สลิปที่แนบแล้วและรอร้านตรวจ จะขึ้นที่นี่', 'new': 'ออเดอร์ที่ร้านยังไม่แจ้งยอด จะขึ้นที่นี่', ship: 'หลังชำระยอดรอบ 1 ร้านจะสั่งของจากจีนให้ แล้วสถานะจะขึ้นที่นี่', inbound: 'เมื่อของออกจากจีนและกำลังเดินทางมาไทย จะขึ้นที่นี่', done: 'ออเดอร์ที่ได้รับของครบแล้ว จะย้ายมาอยู่ที่นี่', refund: 'ถ้ามีสินค้าที่ร้านจีนไม่ส่ง ยอดคืนจะแสดงที่นี่', cancel: 'รายการที่ถูกยกเลิกจะแสดงที่นี่', all: 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
-      function emptyHtml(k, title) { return emptyBlock(title || emptyMsg[k] || 'ไม่มีรายการในหัวข้อนี้', emptySub[k]); }
+      var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์' };
+      var emptySub = { pay: 'เมื่อร้านแจ้งยอดโอนรอบ 1 หรือรอบ 2 ยอดจะขึ้นที่นี่ พร้อมปุ่มแนบสลิป', verify: 'สลิปที่แนบแล้วและรอร้านตรวจ จะขึ้นที่นี่', 'new': 'ออเดอร์ที่ร้านยังไม่แจ้งยอด จะขึ้นที่นี่', ship: 'เมื่อชำระยอดแล้ว ร้านจะสั่งของจากจีนให้ ความคืบหน้าจะแสดงที่นี่', inbound: 'เมื่อของออกจากจีนและกำลังเดินทางมาไทย จะขึ้นที่นี่', done: 'ออเดอร์ที่ได้รับของครบแล้ว จะย้ายมาอยู่ที่นี่', refund: 'ถ้ามีสินค้าที่ร้านจีนไม่ส่ง ยอดคืนจะแสดงที่นี่', cancel: 'รายการที่ถูกยกเลิกจะแสดงที่นี่', all: 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
+      function emptyHtml(k, title) { return emptyBlock(title || emptyMsg[k] || 'ไม่มีรายการในหัวข้อนี้', '', k); } // ตาม Design ที่เจ้าของร้านแก้: ไอคอน + หัวข้อ ไม่มีบรรทัดอธิบาย
       var empty = emptyHtml(S.myTab);
       // แท็บที่แบ่งหัวข้อย่อยเอง (รอแจ้งยอด/ที่ต้องจัดส่ง) ไม่ต้องมีหัวข้อซ้อนกันสองชั้น
-      if (!((S.myTab === 'new' || S.myTab === 'ship') && shown.length)) html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
+      // (ไม่มีหัวข้อซ้ำกับชิปที่เลือก: ตาม Design)
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');
@@ -782,7 +813,7 @@
       } else {
         html += shown.length ? renderGroups(shown) : empty;
       }
-      return html + '<button class="btn primary block back-btn" data-act="more">' + CART_ICON + '<span>กลับไปสั่งของ</span></button>' + adminBtn() + delDialog();
+      return html + delDialog(); // ปุ่ม สั่งของ/ติดต่อร้าน อยู่ที่แถบล่างอยู่แล้ว
     },
 
     // หน้า "รายละเอียดออเดอร์" ของ Lot หนึ่ง (แตะหัวการ์ด Lot ในหน้าออเดอร์ของฉัน)
@@ -813,7 +844,7 @@
           (me.phone ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>' + esc(me.phone) + '</span></div>' : '') +
           (me.address ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>' + esc(me.address) + '</span></div>' : '') +
           '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
-        '<button class="btn block" data-act="detail-back">กลับ</button>' + adminBtn() + delDialog();
+        '<button class="btn block" data-act="detail-back">กลับ</button>' + delDialog();
     },
 
     // หน้า "แก้ไขออเดอร์": ปรับลดจำนวนของทุกรายการใน Lot (เพิ่มกลับได้ไม่เกินจำนวนที่สั่งไว้เดิม) แล้วบันทึกทีเดียว
@@ -987,11 +1018,12 @@
     ORDER_TABS.forEach(function (t) { lab[t.key] = t.label; });
     return stageTagLabel(st, lab[st] || '', d.billing, code) + (st === 'new' ? ' รอบ 1' : '');
   }
-  function openDetail(code) { S.detailCode = code; setScreen('detail'); }
+  function openDetail(code) { if (S.screen === 'my') S.myScrollY = window.scrollY; S.detailCode = code; setScreen('detail'); }
   function openEdit(code) {
     var qty = {}, orig = {};
     lotMine(code).filter(function (o) { return isLive(o) && o.canCancel; }).forEach(function (o) { var k = qtyKey(o.productId, o.option); qty[k] = o.qty; orig[k] = o.qty; });
     S.editPage = { code: code, qty: qty, orig: orig, busy: false };
+    if (S.screen === 'my') S.myScrollY = window.scrollY;
     S.error = ''; setScreen('edit');
   }
   function saveEditPage() {

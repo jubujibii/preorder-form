@@ -1104,13 +1104,42 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .drow .dact { display: flex; gap: 6px; flex: none; margin-left: 8px; }
 .drow .dact .ibtn.ph { visibility: hidden; }
 
-/* ===== ป้ายสถานะตามระบบสีใหม่: ส้มเข้ม = ลูกค้าต้องทำ, เหลือง = รอร้าน, เทา = รอแจ้งยอด, ส้มอ่อน = กำลังเดินทาง, เขียว = เสร็จ, เทาจาง = ยกเลิก ===== */
-.stage.s-pay { background: var(--accent-dark); color: var(--on-accent); }
-.stage.s-verify { background: var(--warn-bg); color: var(--warn-ink); }
-.stage.s-new { background: var(--line); color: var(--ink); }
-.stage.s-ship { background: var(--accent-soft); color: var(--accent-deep); }
-.stage.s-ship.r2 { background: var(--line); color: var(--ink); }
-.stage.s-inbound { background: var(--accent-soft); color: var(--accent-deep); }
-.stage.s-done { background: var(--ok-bg); color: var(--ok); }
-.stage.s-refund { background: var(--warn-bg); color: var(--warn-ink); }
-.stage.s-cancel { background: var(--line); color: var(--muted); font-weight: 500; }
+
+/* ===== แถบหมวดออเดอร์แบบชิป (แทนการ์ดสรุป "การซื้อของฉัน") ===== */
+.stickytabs { display: flex; position: sticky; top: var(--hdr-h, 59px); left: auto; right: auto; z-index: 30; margin: 0 -16px 12px; padding: 10px 16px; background: var(--bg); border-bottom: 0; box-shadow: none; }
+.stickytabs .st { padding: 9px 16px; font-size: 14px; font-weight: 400; border-color: var(--line); }
+.stickytabs .st.active { font-weight: 600; }
+.stickytabs .st .st-n { margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--badge-red); color: var(--on-accent); font-size: 12px; font-weight: 700; line-height: 18px; opacity: 1; display: inline-block; text-align: center; }
+.stickytabs .st.active .st-n { background: var(--paper); color: var(--badge-red); opacity: 1; }
+
+/* ===== จัดระยะการ์ด Lot และคำอธิบายหัวข้อให้โปร่งขึ้น ===== */
+.group[data-scope="my"] { padding-bottom: 2px; }
+.group[data-scope="my"] > .sumline { padding: 14px 0 12px; line-height: 1.4; }
+.sec-note { background: none; padding: 0; margin: 0 0 10px; border-radius: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+/* ปุ่มแก้ไข/ลบในหน้ารายละเอียด: วงกลม 40px ตามดีไซน์ (ปุ่มแก้ไขจางเมื่อสั่งชิ้นเดียว) */
+.drow .dact .ibtn { width: 40px; height: 40px; border-radius: 50%; }
+.drow .dact .ibtn.edit { background: var(--accent-soft); color: var(--accent-deep); }
+
+/* ===== หน้ากำลังโหลดแบบโครงหน้า (skeleton) ===== */
+.sk { border-radius: 12px; background: linear-gradient(90deg, var(--line) 0%, var(--accent-tint) 50%, var(--line) 100%); background-size: 200% 100%; animation: sk-shimmer 1.4s ease-in-out infinite; }
+@keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.sk-wrap { padding-top: 6px; }
+.sk-title { height: 34px; width: 200px; margin-bottom: 12px; }
+.sk-sub { height: 18px; width: 86%; margin-bottom: 16px; }
+.sk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.sk-img { aspect-ratio: 4 / 3; border-radius: 18px; }
+.sk-l1 { height: 16px; width: 80%; }
+.sk-l2 { height: 20px; width: 50%; }
+.sk-txt { margin-top: 16px; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* ===== การ์ด Lot ในหน้าออเดอร์ตามดีไซน์: ชื่อ Lot + ข้อมูลซ้าย ป้ายสถานะขวา ไม่มีไอคอนอุ้งเท้า ===== */
+.group[data-scope="my"] > summary { grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; align-items: center; padding: 16px 0 10px; }
+.group[data-scope="my"] > summary::before { display: none; }
+.group[data-scope="my"] > summary .g-title { grid-column: 1; grid-row: 1; padding-right: 0; font-size: 20px; line-height: 1.25; }
+.group[data-scope="my"] > summary .g-meta { grid-column: 1; grid-row: 2; font-size: 13px; }
+.group[data-scope="my"] > summary .g-tags { grid-column: 2; grid-row: 1 / span 2; align-self: center; justify-self: end; max-width: 170px; }
+.group[data-scope="my"] > summary .g-tags .stage { white-space: nowrap; }
+.drow .dact .ibtn.edit:disabled { opacity: .3; cursor: not-allowed; }

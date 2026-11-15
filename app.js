@@ -74,6 +74,13 @@
     return '<p class="tl-cap">ของออกจากจีน กำลังเดินทางมาไทย' + (late ? ' · คาดว่าถึง ' + esc(etaText(late)) : '') + '</p>';
   }
   // ป้ายสถานะของ Lot: ขั้น "รอจัดส่ง" ที่ร้านยังไม่แจ้งยอดรอบ 2 ให้แสดงเป็น "รอแจ้งยอดรอบ 2" (ลูกค้ารออะไรอยู่ชัดกว่า)
+  // ป้ายสถานะของ Lot ในแท็บ รอจัดส่ง/รอรับของ: ขั้นที่ช้าที่สุดของรายการ (ตรงกับไทม์ไลน์)
+  function statusTag(items) {
+    var LAB = { 'สั่งของแล้ว': 'สั่งของแล้ว', 'ออกจากจีน': 'ออกจากจีนแล้ว', 'ถึงไทย': 'ถึงไทยแล้ว', 'แพ็กแล้ว': 'แพ็กแล้ว', 'ส่งแล้ว': 'ส่งแล้ว', 'สำเร็จ': 'สำเร็จ', 'รับออเดอร์': 'รอร้านสั่งของ' };
+    var ORDER = ['รับออเดอร์', 'สั่งของแล้ว', 'ออกจากจีน', 'ถึงไทย', 'แพ็กแล้ว', 'ส่งแล้ว', 'สำเร็จ'], min = 99, pick = '';
+    items.forEach(function (o) { var r = ORDER.indexOf(o.status); if (r >= 0 && r < min) { min = r; pick = o.status; } });
+    return pick ? '<span class="g-tags"><span class="stage s-ship">' + esc(LAB[pick]) + '</span></span>' : '';
+  }
   function stageTagLabel(key, label, billing, code) {
     if (key !== 'ship') return label;
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
@@ -560,7 +567,10 @@
   }
 
   var SCREENS = {
-    loading: function () { return '<p class="center muted">กำลังโหลด…</p>'; },
+    loading: function () {
+      var card = '<div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div>';
+      return '<div class="sk-wrap" role="status" aria-label="กำลังโหลด"><div class="sk sk-title"></div><div class="sk sk-sub"></div><div class="sk-grid">' + card + card + '</div><p class="center muted sk-txt">กำลังโหลด…</p></div>';
+    },
 
     error: function () {
       return '<h1>เปิดหน้านี้ไม่ได้</h1>' + errBanner() +
@@ -646,7 +656,7 @@
     my: function () {
       var d = S.my;
       var html = '<h1 class="sr-only">ออเดอร์ของฉัน</h1>' + errBanner();
-      if (!d) return html + '<p class="center muted">กำลังโหลด…</p>';
+      if (!d) return html + SCREENS.loading();
       if (!d.orders.length) return html + '' + emptyBlock('ยังไม่มีออเดอร์', 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย ออเดอร์ที่สั่งแล้วจะมาอยู่ที่นี่') + '<button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var merged = mergeOrderLines(d.orders);
       var counts = tabCounts(merged, d.billing);
@@ -667,12 +677,7 @@
       }
       var refundPending = typeof pendingRefundCount === 'function' ? pendingRefundCount(merged, d.billing) : 0;
       var moreOpen = S.myMore;
-      html += '<section class="mybuy"><div class="mybuy-head"><strong>การซื้อของฉัน</strong><button type="button" class="linkbtn more-link" data-act="more-tabs" aria-expanded="' + moreOpen + '">ดูเพิ่มเติม ' + (moreOpen ? '▴' : '›') + (!moreOpen && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button></div>' +
-        '<div role="tablist">' + tile('pay', true) + '<div class="tiles">' + tile('new') + tile('ship') + tile('inbound') + '</div></div>' +
-        (moreOpen ? '<div class="more-tabs">' + MORE_TAB_KEYS.map(function (k) {
-          return '<button type="button" role="tab" class="chip' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (k === 'refund' && refundPending > 0 ? '<span class="chip-n">' + refundPending + '</span>' : '') + '</button>';
-        }).join('') + '</div>' : '') + '</section>' +
-        '<nav class="stickytabs" role="tablist" aria-label="หมวดออเดอร์">' + ['pay', 'new', 'ship', 'inbound'].concat(MORE_TAB_KEYS).map(function (k) {
+      html += '<nav class="stickytabs" role="tablist" aria-label="หมวดออเดอร์">' + ['all', 'pay', 'new', 'ship', 'inbound', 'done', 'refund', 'cancel'].map(function (k) {
           var n = k === 'refund' ? refundPending : counts[k];
           return '<button type="button" role="tab" class="st' + (S.myTab === k ? ' active' : '') + '" aria-selected="' + (S.myTab === k) + '" data-act="tab" data-tab="' + k + '">' + esc(labelOf[k]) + (n ? '<span class="st-n">' + n + '</span>' : '') + '</button>';
         }).join('') + '</nav>';
@@ -705,7 +710,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live, lotPaid(d.billing, code)) : '');
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : (S.myTab === 'ship' || S.myTab === 'inbound' ? statusTag(live) : '')) + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -774,13 +779,6 @@
           var part = shown.filter(g[3]);
           if (part.length) html += secHead(g[1], 'wait', g[2], secCount) + renderGroups(part);
         });
-      } else if (S.myTab === 'ship' && shown.length) {
-        var secCount = ['แพ็กแล้ว', 'ถึงไทย', 'ออกจากจีน', 'สั่งของแล้ว'].filter(function (st) { return shown.some(function (o) { return o.status === st; }); }).length;
-        // ที่ต้องจัดส่ง แยกหัวข้อตามสถานะ เรียงใกล้ถึงมือลูกค้าที่สุดก่อน: แพ็กแล้ว > ถึงไทย > ออกจากจีน > สั่งของแล้ว
-        [['แพ็กแล้ว', 'แพ็กแล้ว รอจัดส่ง', 'ร้านแพ็กของแล้ว กำลังจะส่งถึงคุณ', 'ok'], ['ถึงไทย', 'ถึงไทยแล้ว', 'ของถึงไทยแล้ว รอร้านแพ็กและส่ง', 'ok'], ['ออกจากจีน', 'ออกจากจีนแล้ว', 'ของออกจากจีน กำลังเดินทางมาไทย', 'wait'], ['สั่งของแล้ว', 'สั่งของแล้ว', 'ร้านสั่งของจากจีนแล้ว รอของออกจากจีน', 'wait'], ['รับออเดอร์', 'ชำระแล้ว รอร้านสั่งของ', 'ร้านได้รับยอดแล้ว และจะสั่งของจากจีนให้เมื่อรวมออเดอร์ครบ', 'wait']].forEach(function (g) {
-          var part = shown.filter(function (o) { return o.status === g[0]; });
-          if (part.length) html += secHead(g[1], g[3], g[2], secCount) + renderGroups(part);
-        });
       } else {
         html += shown.length ? renderGroups(shown) : empty;
       }
@@ -790,7 +788,7 @@
     // หน้า "รายละเอียดออเดอร์" ของ Lot หนึ่ง (แตะหัวการ์ด Lot ในหน้าออเดอร์ของฉัน)
     detail: function () {
       var d = S.my, code = S.detailCode;
-      if (!d) return '<p class="center muted">กำลังโหลด…</p>';
+      if (!d) return SCREENS.loading();
       var mine = lotMine(code), live = mine.filter(isLive), ended = !live.length;
       if (!mine.length) return '<p class="muted center">ไม่พบรายการของ Lot นี้</p><button class="btn block" data-act="detail-back">กลับ</button>';
       if (ended) live = mine; // Lot ที่ยกเลิก/คืนเงินทั้งหมด: ยังแสดงรายการ (ขีดฆ่า) แต่ไม่นับยอด
@@ -802,7 +800,7 @@
         return '<div class="drow' + (ended ? ' is-ended' : '') + '">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname dopt">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
           '<div class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div></div>' +
           '<div class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</div>' +
-          (!ended && o.canCancel ? '<div class="dact">' + (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-code="' + esc(code) + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<span class="ibtn ph" aria-hidden="true"></span>') +
+          (!ended && o.canCancel ? '<div class="dact">' + (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-code="' + esc(code) + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<button type="button" class="ibtn edit" disabled aria-label="แก้จำนวนไม่ได้ (สั่งชิ้นเดียว)">' + EDIT_ICON + '</button>') +
             '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(qtyKey(o.productId, o.option)) + '" data-code="' + esc(code) + '" data-label="' + esc(o.option || o.productName) + '" aria-label="ลบรายการนี้">' + TRASH_ICON + '</button></div>' : '') + '</div>';
       }).join('');
       return '<section class="dcard dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
@@ -821,7 +819,7 @@
     // หน้า "แก้ไขออเดอร์": ปรับลดจำนวนของทุกรายการใน Lot (เพิ่มกลับได้ไม่เกินจำนวนที่สั่งไว้เดิม) แล้วบันทึกทีเดียว
     edit: function () {
       var d = S.my, e = S.editPage;
-      if (!d || !e) return '<p class="center muted">กำลังโหลด…</p>';
+      if (!d || !e) return SCREENS.loading();
       var all = lotMine(e.code).filter(isLive), rows = all.filter(function (o) { return o.canCancel; });
       var html = errBanner();
       if (!rows.length) return html + '<p class="muted center">ไม่มีรายการที่แก้ไขได้ (Lot นี้อาจปิดรับหรือร้านแจ้งยอดแล้ว) กรุณาติดต่อแอดมินทางแชท</p><button class="btn block" data-act="ep-cancel">กลับ</button>' + adminBtn();

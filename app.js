@@ -823,6 +823,19 @@
       var bd = (d.billing || []).filter(function (x) { return x.preorderCode === code; })[0];
       if (!ended && !deadTab && bd && bd.round1 && bd.round1.totalSatang > 0) total = bd.round1.totalSatang; // รวมค่าส่งจีน
       var me = d.customer;
+      // Lot ที่มีทั้งรายการปกติและที่ยกเลิก/คืนเงิน: แสดงรายการที่ยกเลิก/คืนเงินแยกต่อท้าย (ขีดฆ่า ไม่มีปุ่ม) ให้ตรงกับป้ายที่หัวการ์ด
+      function deadRow(o) {
+        var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
+        return '<div class="drow is-ended">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname dopt">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
+          '<div class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div></div><div class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</div></div>';
+      }
+      var deadSecs = '';
+      if (!ended && !deadTab) {
+        [['ยกเลิก', 'รายการที่ยกเลิก'], ['คืนเงิน', 'รายการที่คืนเงิน']].forEach(function (g) {
+          var ls = mine.filter(function (o) { return o.status === g[0]; });
+          if (ls.length) deadSecs += '<section class="dcard"><h2 class="dtitle">' + g[1] + ' (' + ls.length + ' รายการ)</h2>' + ls.map(deadRow).join('') + '</section>';
+        });
+      }
       var rows = live.map(function (o) {
         var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
         return '<div class="drow' + (ended ? ' is-ended' : '') + '">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname dopt">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
@@ -835,6 +848,7 @@
         (function () { var pb = !ended ? billHtml(d, code, live, goodsTotal, true, true) : ''; return pb ? '<section class="dpay">' + pb + '</section>' : ''; })() +
         '<section class="dcard"><h2 class="dtitle">' + (deadTab === 'ยกเลิก' ? 'รายการที่ยกเลิก' : deadTab ? 'รายการที่คืนเงิน' : 'รายการสินค้า') + ' (' + live.length + ' รายการ)</h2>' + rows +
         '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">' + (deadTab === 'ยกเลิก' ? 'ยอดที่ยกเลิก' : deadTab ? 'ยอดที่คืนเงิน' : 'ยอดรวม') + ' <strong>' + baht(total) + '</strong></span></div></section>' +
+        deadSecs +
         (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +
           '<div class="dgrid">' + (me.recipientName ? '<span class="sub">ผู้รับ</span><span>' + esc(me.recipientName) + '</span>' : '') + (me.phone ? '<span class="sub">เบอร์โทร</span><span>' + esc(me.phone) + '</span>' : '') + (me.address ? '<span class="sub">ที่อยู่</span><span>' + esc(me.address) + '</span>' : '') + '</div>' +
           '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
@@ -1113,18 +1127,21 @@
     var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
     if (onlyUnpaid && !(b && [b.round1, b.round2].some(function (r) { return r && !r.paid; }))) return '';
         if (b && live.length) {
-          html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '">';
-          [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
+                    [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
             if (!r || (onlyUnpaid && r.paid)) return;
+            if (!onlyUnpaid && !r.paid && r.slipAt) return; // รอตรวจสอบ: ในรายการแสดงแบบย่อ (ป้าย + ดูรายละเอียด) รายละเอียดสลิปอยู่ในหน้ารายละเอียด
             var sk = code + '|' + x[2];
             var dueUrgent = r.dueAt && new Date(r.dueAt).getTime() - Date.now() < 24 * 3600 * 1000;
-            var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<span class="pay-due' + (dueUrgent ? ' urgent' : '') + '">' + (onlyUnpaid ? 'โอนภายใน ' : 'ภายใน ') + esc(dueText(r.dueAt)) + '</span>' : '';
+            var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<span class="pay-due' + (dueUrgent ? ' urgent' : '') + '">' + 'ภายใน ' + esc(dueText(r.dueAt)) + '</span>' : '';
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : '';
-            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + (badge || (onlyUnpaid ? '' : dueLine)) + '</div>' +
-              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + (onlyUnpaid ? dueLine : '') +
+            html += '<div class="billbox' + (r.paid ? ' all-paid' : '') + '"><div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + (badge || dueLine) + '</div>' +
+              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' +
               (x[2] === 1 && goodsSatang > 0 && r.totalSatang > goodsSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(goodsSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - goodsSatang) + '</b></div></div>' : '');
+            // แท็บที่ต้องชำระ/หน้ารายละเอียด: กล่องยอดสีชมพูจบที่นี่ บัญชีและปุ่มแนบสลิปอยู่ใต้กล่องตาม Design; แท็บทั้งหมด: ปุ่มอยู่ในกล่อง
+            if (withBank || r.paid) html += '</div></div>';
             if (!r.paid) {
+              html += '<div class="pay-acts' + (withBank ? '' : ' in-box') + '">';
               var busy = S.slipBusy === sk;
               if (S.slipErr[sk] && !busy) html += '<div class="slip-fail" role="alert"><strong>⚠ แนบสลิปไม่สำเร็จ</strong><span>' + esc(S.slipErr[sk]) + '</span><span class="small">สลิปยังไม่ถูกส่งถึงร้าน กดแนบสลิปอีกครั้ง หรือติดต่อแอดมิน</span></div>';
               var inp = '<input type="file" accept="image/*" hidden data-slip="' + esc(sk) + '"' + (busy ? ' disabled' : '') + '>';
@@ -1136,9 +1153,8 @@
                   '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'แนบสลิป') + inp + '</label>';
               }
             }
-            html += '</div>';
+            if (!r.paid) html += withBank ? '</div>' : '</div></div></div>';
           });
-          html += '</div>';
         }
     return html;
   }

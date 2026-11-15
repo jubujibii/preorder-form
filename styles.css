@@ -1217,5 +1217,10 @@ body[data-screen="my"] .top-title { margin-left: -8px; }
 .pay-top .pay-due { margin: 3px 0 0; flex: none; white-space: nowrap; font-size: 12.5px; }
 .pay-due.urgent { color: var(--accent-dark); font-weight: 600; }
 
-/* หน้ารายละเอียด (บอร์ด 38): กำหนดโอนอยู่ใต้ยอด ไม่ใช่มุมขวา */
-.dpay .pay-amt + .pay-due { margin: -2px 0 10px; }
+
+/* บัญชีโอน + ปุ่มแนบสลิปอยู่ใต้กล่องยอด (ตาม Design หน้า 12/38) */
+.pay-acts { margin: 10px 0 4px; }
+.pay-acts.in-box { margin: 0; }
+.pay-acts .payinfo.pbox { margin: 0 0 10px; }
+.stage.s-pay { font-weight: 500; background: #efe6d6; color: #3d2c22; }
+.pay-acts:not(.in-box) { margin-bottom: 14px; }

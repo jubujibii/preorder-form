@@ -844,15 +844,32 @@
           (!ended && o.canCancel ? '<div class="dact">' + (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-code="' + esc(code) + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<button type="button" class="ibtn edit" disabled aria-label="แก้จำนวนไม่ได้ (สั่งชิ้นเดียว)">' + EDIT_ICON + '</button>') +
             '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(qtyKey(o.productId, o.option)) + '" data-code="' + esc(code) + '" data-label="' + esc(o.option || o.productName) + '" aria-label="ลบรายการนี้">' + TRASH_ICON + '</button></div>' : '') + '</div>';
       }).join('');
+      // รอบที่ยังไม่จ่ายและยังไม่แนบสลิป: การ์ดเดียว (ยอด + กำหนดโอน + บัญชี) และปุ่มแนบสลิปติดล่าง ตาม Design หน้า 38
+      var primary = null, primaryHtml = '', payBar = '';
+      if (!ended && !deadTab && bd) {
+        [[1, bd.round1], [2, bd.round2]].some(function (x) { if (x[1] && !x[1].paid && !x[1].slipAt) { primary = { n: x[0], r: x[1] }; return true; } return false; });
+        if (primary) {
+          var pr = primary.r, psk = code + '|' + primary.n, pbusy = S.slipBusy === psk;
+          var pUrgent = pr.dueAt && new Date(pr.dueAt).getTime() - Date.now() < 24 * 3600 * 1000;
+          primaryHtml = '<div class="dpaycard"><div class="dp-top"><div class="dp-row"><span>ยอดโอนรอบ ' + primary.n + '</span>' + (pr.dueAt ? '<span class="pay-due' + (pUrgent ? ' urgent' : '') + '">ภายใน ' + esc(dueText(pr.dueAt)) + '</span>' : '') + '</div><div class="dp-amt">' + baht(pr.totalSatang) + '</div></div>' + payInfoBox(d.paymentInfo) + '</div>' +
+            (S.slipErr[psk] && !pbusy ? '<div class="slip-fail" role="alert"><strong>⚠ แนบสลิปไม่สำเร็จ</strong><span>' + esc(S.slipErr[psk]) + '</span></div>' : '');
+          payBar = '<div class="bar dpay-bar"><label class="btn slip-btn' + (pbusy ? ' is-busy' : '') + '">' + (pbusy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'แนบสลิป · ' + baht(pr.totalSatang)) + '<input type="file" accept="image/*" hidden data-slip="' + esc(psk) + '"' + (pbusy ? ' disabled' : '') + '></label></div>';
+        }
+      }
+      var splitHtml = !ended && !deadTab && bd && bd.round1 && goodsTotal > 0 && bd.round1.totalSatang > goodsTotal ? '<div class="pay-split dsplit"><div><span>ค่าสินค้า (' + live.length + ' รายการ)</span><b>' + baht(goodsTotal) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(bd.round1.totalSatang - goodsTotal) + '</b></div></div>' : '';
       return (function () { var t = lotTimeline(live, lotPaid(d.billing, code)); return t ? '<section class="dcard dtl">' + t + '</section>' : ''; })() +
-        (function () { var pb = !ended ? billHtml(d, code, live, goodsTotal, true, true) : ''; return pb ? '<section class="dpay">' + pb + '</section>' : ''; })() +
+        (function () {
+          if (ended) return '';
+          var pb = billHtml(d, code, live, goodsTotal, true, true, primary ? primary.n : 0);
+          return (primaryHtml || pb) ? '<section class="dpay">' + primaryHtml + pb + '</section>' : '';
+        })() +
         '<section class="dcard"><h2 class="dtitle">' + (deadTab === 'ยกเลิก' ? 'รายการที่ยกเลิก' : deadTab ? 'รายการที่คืนเงิน' : 'รายการสินค้า') + ' (' + live.length + ' รายการ)</h2>' + rows +
-        '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">' + (deadTab === 'ยกเลิก' ? 'ยอดที่ยกเลิก' : deadTab ? 'ยอดที่คืนเงิน' : 'ยอดรวม') + ' <strong>' + baht(total) + '</strong></span></div></section>' +
+        splitHtml + '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">' + (deadTab === 'ยกเลิก' ? 'ยอดที่ยกเลิก' : deadTab ? 'ยอดที่คืนเงิน' : 'ยอดรวม') + ' <strong>' + baht(total) + '</strong></span></div></section>' +
         deadSecs +
         (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +
           '<div class="dgrid">' + (me.recipientName ? '<span class="sub">ผู้รับ</span><span>' + esc(me.recipientName) + '</span>' : '') + (me.phone ? '<span class="sub">เบอร์โทร</span><span>' + esc(me.phone) + '</span>' : '') + (me.address ? '<span class="sub">ที่อยู่</span><span>' + esc(me.address) + '</span>' : '') + '</div>' +
           '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
-        '<button class="btn block" data-act="detail-back">กลับ</button>' + delDialog();
+        (payBar || '<button class="btn block" data-act="detail-back">กลับ</button>') + delDialog();
     },
 
     // หน้า "แก้ไขออเดอร์": ปรับลดจำนวนของทุกรายการใน Lot (เพิ่มกลับได้ไม่เกินจำนวนที่สั่งไว้เดิม) แล้วบันทึกทีเดียว
@@ -1122,14 +1139,14 @@
   }
   var COPY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
   // กล่องยอดโอน (รอบ 1/2) ของ Lot: ใช้ทั้งในรายการและหน้ารายละเอียด (หน้ารายละเอียดแสดงเฉพาะรอบที่ยังไม่จ่าย พร้อมบัญชีและปุ่มแนบสลิป)
-  function billHtml(d, code, live, goodsSatang, withBank, onlyUnpaid) {
+  function billHtml(d, code, live, goodsSatang, withBank, onlyUnpaid, skipRound) {
     var html = '';
     var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
     if (onlyUnpaid && !(b && [b.round1, b.round2].some(function (r) { return r && !r.paid; }))) return '';
         if (b && live.length) {
                     [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
-            if (!r || (onlyUnpaid && r.paid)) return;
+            if (!r || (onlyUnpaid && r.paid) || skipRound === x[2]) return;
             if (!onlyUnpaid && !r.paid && r.slipAt) return; // รอตรวจสอบ: ในรายการแสดงแบบย่อ (ป้าย + ดูรายละเอียด) รายละเอียดสลิปอยู่ในหน้ารายละเอียด
             var sk = code + '|' + x[2];
             var dueUrgent = r.dueAt && new Date(r.dueAt).getTime() - Date.now() < 24 * 3600 * 1000;

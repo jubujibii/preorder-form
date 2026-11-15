@@ -1236,3 +1236,21 @@ body[data-screen="my"] .top-title { margin-left: -8px; }
 .pay-acts .pay-note { margin: 0 0 10px; }
 .pay-acts .slip-btn { margin: 0; }
 .pay-acts.in-box .slip-btn { margin-top: 8px; }
+
+/* หน้ารายละเอียด (รอชำระ) ตามบอร์ด 38: การ์ดยอด+บัญชีใบเดียว, แยกค่าสินค้า/ค่าส่งในการ์ดรายการ, ปุ่มแนบสลิปติดล่าง */
+.dpaycard { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; margin-bottom: 14px; box-shadow: 0 6px 18px var(--shade-04); }
+.dp-top { padding: 16px 16px 14px; background: var(--accent-tint); }
+.dp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 14px; }
+.dp-amt { font-family: var(--font-display); font-size: 36px; font-weight: 700; color: var(--accent-dark); line-height: 1.15; margin-top: 2px; }
+.dpaycard .pay-due { margin: 0; font-size: 12.5px; }
+.dpaycard .payinfo.pbox { margin: 0; border: 0; border-top: 1px dashed var(--accent-line); border-radius: 0; background: none; padding: 14px 16px 16px; }
+.dpaycard .payinfo.pbox .pb-no { font-size: 22px; }
+.dsplit { margin: 2px 16px 0; padding: 10px 0 2px; border-top: 1px dashed var(--accent-line); }
+body[data-screen="detail"] .dpay-bar { bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+body[data-screen="detail"] .dpay-bar .slip-btn { margin: 0; width: 100%; }
+body[data-screen="detail"]:has(.dpay-bar) #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* ระยะห่างระหว่างกล่องในการ์ด Lot (กล่องยอด / กล่องคืนเงิน) ไม่ให้ชนกัน */
+.group > .billbox, .group > .refundbox { margin-bottom: 10px; }
+.group > .billbox:last-of-type, .group > .refundbox:last-of-type { margin-bottom: 14px; }
+.refundbox .ref-order { display: none; } /* เลขออเดอร์ซ้ำกับหัวกล่องยอดโอน */

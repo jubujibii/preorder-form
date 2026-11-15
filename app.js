@@ -98,7 +98,9 @@
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
     if (key === 'new') return b && b.round1 && b.round1.paid ? 'รอแจ้งยอดรอบ 2' : label + ' รอบ 1'; // ถึงไทยแล้วแต่ร้านยังไม่แจ้งยอดรอบ 2 = รอบ 2
     if (key !== 'ship') return label;
-    return b && b.round2 ? label : 'รอแจ้งยอดรอบ 2';
+    if (b && b.round2) return label;
+    var lv = lotMine(code).filter(isLive); // จ่ายรอบ 1 แล้วแต่ร้านยังไม่สั่งของ = รอสั่งของ
+    return lv.length && lv.every(function (o) { return o.status === 'รับออเดอร์'; }) ? 'รอสั่งของ' : 'รอแจ้งยอดรอบ 2';
   }
   function lotPaid(billing, code) {
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
@@ -1017,7 +1019,7 @@
     if (!d || !mine.length) return '';
     var st = paymentStateByPreorder(d.billing)[code] || lineTab(mine[0], d.billing), lab = {};
     ORDER_TABS.forEach(function (t) { lab[t.key] = t.label; });
-    return stageTagLabel(st, lab[st] || '', d.billing, code) + (st === 'new' ? ' รอบ 1' : '');
+    return stageTagLabel(st, lab[st] || '', d.billing, code);
   }
   function openDetail(code) { if (S.screen === 'my') S.myScrollY = window.scrollY; S.detailCode = code; setScreen('detail'); }
   function openEdit(code) {

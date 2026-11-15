@@ -1282,3 +1282,20 @@ body[data-screen="detail"] .dpay-bar { bottom: 0; left: 0; right: 0; padding: 10
 .bb-chip { flex: none; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
 .bb-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 .bb-chip-n { margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--badge-red); color: #fff; font-size: 12px; line-height: 18px; display: inline-block; text-align: center; box-sizing: border-box; }
+
+/* จัดวางใหม่: ชิปดูเพิ่มเติมเป็น 4 ช่องเท่ากัน, แบนเนอร์ที่ต้องชำระใหญ่ขึ้น */
+.bb-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; overflow: visible; padding-top: 4px; }
+.bb-chip { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 9px 4px; font-size: 14px; white-space: nowrap; }
+.bb-chip-n { margin-left: 0; }
+.bb-pay { height: 78px; padding: 12px 16px; gap: 14px; }
+.bb-pay-ic svg { width: 32px; height: 32px; }
+.bb-pay-txt b { font-size: 19px; }
+.bb-pay-txt small { font-size: 14px; }
+.bb-pay-txt small strong { font-size: 17px; }
+.bb-pay::after { width: 78px; height: 64px; right: 36px; }
+.buyblock { gap: 10px; } /* ระยะห่างหัวการ์ด/แบนเนอร์/ปุ่มกล่อง/ชิป กลับเป็น 10px เท่าเดิม */
+
+/* ชิปดูเพิ่มเติมให้เล็กลง */
+/* ระยะห่างคงเดิม (8px / บน 4px) ย่อเฉพาะขนาดชิป */
+.bb-chips { gap: 8px; padding-top: 2px; }
+.bb-chip { padding: 5px 2px; font-size: 13px; }

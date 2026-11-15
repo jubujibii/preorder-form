@@ -792,7 +792,7 @@
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');
-        html += shown.length ? renderGroups(shown) : (waiting.length ? emptyHtml('pay', 'ไม่มียอดที่ต้องชำระ') : empty);
+        html += shown.length ? renderGroups(shown) : (waiting.length ? '' : empty); // มีแต่รอตรวจสอบ: ไม่แสดงหน้าว่างเต็มจอ เพื่อไม่ให้ดูเหมือนรายการหาย
         if (waiting.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>รอตรวจสอบ</h2><p class="small muted sec-note">แนบสลิปแล้ว รอร้านตรวจสอบยอด</p>' + renderGroups(waiting);
       } else if (S.myTab === 'new' && shown.length) {
         var secCount = (shown.some(function (o) { return o.status !== 'ถึงไทย'; }) ? 1 : 0) + (shown.some(function (o) { return o.status === 'ถึงไทย'; }) ? 1 : 0);
@@ -1120,7 +1120,7 @@
             var sk = code + '|' + x[2];
             var dueUrgent = r.dueAt && new Date(r.dueAt).getTime() - Date.now() < 24 * 3600 * 1000;
             var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<span class="pay-due' + (dueUrgent ? ' urgent' : '') + '">' + (onlyUnpaid ? 'โอนภายใน ' : 'ภายใน ') + esc(dueText(r.dueAt)) + '</span>' : '';
-            var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '';
+            var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : '';
             html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + (badge || (onlyUnpaid ? '' : dueLine)) + '</div>' +
               '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + (onlyUnpaid ? dueLine : '') +
               (x[2] === 1 && goodsSatang > 0 && r.totalSatang > goodsSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(goodsSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - goodsSatang) + '</b></div></div>' : '');

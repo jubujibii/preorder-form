@@ -1095,3 +1095,22 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .drow.is-ended .my-pimg { opacity: .5; filter: grayscale(1); }
 .pblock.is-flat .my-pimg { width: 56px; height: 56px; border-radius: 12px; flex: 0 0 auto; object-fit: cover; }
 .pblock.is-flat .my-pimg.ph { display: block; background: var(--accent-soft); }
+
+/* ===== การ์ด Lot = ภาพรวม; รายการเต็มและปุ่มแก้ไข/ลบอยู่ที่หน้ารายละเอียด ===== */
+.sumline { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 0; padding: 12px 0; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 14px; color: var(--ink); text-align: left; cursor: pointer; }
+.sumline > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sumline .chev { flex: none; color: var(--accent-dark); font-weight: 700; font-size: 20px; }
+.sumline.is-ended > span:first-child { color: var(--muted); text-decoration: line-through; }
+.drow .dact { display: flex; gap: 6px; flex: none; margin-left: 8px; }
+.drow .dact .ibtn.ph { visibility: hidden; }
+
+/* ===== ป้ายสถานะตามระบบสีใหม่: ส้มเข้ม = ลูกค้าต้องทำ, เหลือง = รอร้าน, เทา = รอแจ้งยอด, ส้มอ่อน = กำลังเดินทาง, เขียว = เสร็จ, เทาจาง = ยกเลิก ===== */
+.stage.s-pay { background: var(--accent-dark); color: var(--on-accent); }
+.stage.s-verify { background: var(--warn-bg); color: var(--warn-ink); }
+.stage.s-new { background: var(--line); color: var(--ink); }
+.stage.s-ship { background: var(--accent-soft); color: var(--accent-deep); }
+.stage.s-ship.r2 { background: var(--line); color: var(--ink); }
+.stage.s-inbound { background: var(--accent-soft); color: var(--accent-deep); }
+.stage.s-done { background: var(--ok-bg); color: var(--ok); }
+.stage.s-refund { background: var(--warn-bg); color: var(--warn-ink); }
+.stage.s-cancel { background: var(--line); color: var(--muted); font-weight: 500; }

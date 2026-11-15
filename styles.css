@@ -1224,3 +1224,15 @@ body[data-screen="my"] .top-title { margin-left: -8px; }
 .pay-acts .payinfo.pbox { margin: 0 0 10px; }
 .stage.s-pay { font-weight: 500; background: #efe6d6; color: #3d2c22; }
 .pay-acts:not(.in-box) { margin-bottom: 14px; }
+
+/* กล่องยอดโอนให้กระชับตาม Design (ระยะห่าง/ขนาดตัวเลขตรงกับบอร์ด 12) */
+.billbox { border-radius: 14px; box-shadow: none; margin-bottom: 0; }
+.pay-name, .pay-name small { line-height: 1.3; }
+.pay-round .pay-amt { font-size: 34px; line-height: 1.2; margin: 6px 0 2px; }
+.pay-split { margin: 0; }
+.pay-split > div { line-height: 1.5; }
+.pay-acts:not(.in-box) { margin: 12px 0 14px; }
+.pay-acts .payinfo.pbox { margin: 0 0 12px; }
+.pay-acts .pay-note { margin: 0 0 10px; }
+.pay-acts .slip-btn { margin: 0; }
+.pay-acts.in-box .slip-btn { margin-top: 8px; }

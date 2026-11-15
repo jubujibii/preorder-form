@@ -1191,3 +1191,17 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 body[data-screen="my"] .top-title, body[data-screen="detail"] .top-title, body[data-screen="cancel"] .top-title, body[data-screen="edit"] .top-title { justify-content: flex-start; margin-left: -4px; }
 body[data-screen="my"] .top-title::before { display: none; }
 body[data-screen="my"] .top-title { margin-left: -8px; }
+
+/* หน้าที่ต้องชำระตาม Design: ป้าย รอชำระ สีเทาน้ำตาล, กล่องโอนเข้าบัญชีขอบประ, จุดจำนวนในแท็บที่เลือกเป็นสีแดง */
+.stage.s-pay { background: #eee3d0; color: #5a4636; }
+.stickytabs .st.active .st-n { background: var(--badge-red); color: #fff; }
+.payinfo.pbox { display: block; background: var(--paper); border: 1px dashed var(--accent-line); border-radius: 14px; padding: 14px; margin: 10px 0 8px; }
+.pbox .pb-head { font-size: 13px; color: var(--muted); }
+.pbox .pb-bank { font-weight: 600; margin-top: 2px; }
+.pbox .pb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.pbox .pb-no { font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+.pbox .pb-copy { flex: none; border: 0; border-radius: 999px; padding: 5px 14px; background: var(--accent-soft); color: var(--accent-dark); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pbox .pb-name { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.pay-round .pay-note { margin: 0 0 10px; }
+.billbox > .pay-round:first-child { border-top: 0; padding-top: 0; }
+.billbox { padding-top: 14px; }

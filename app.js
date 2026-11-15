@@ -98,6 +98,7 @@
   function stageTagLabel(key, label, billing, code) {
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
     if (key === 'new') return b && b.round1 && b.round1.paid ? 'รอแจ้งยอดรอบ 2' : label + ' รอบ 1'; // ถึงไทยแล้วแต่ร้านยังไม่แจ้งยอดรอบ 2 = รอบ 2
+    if (key === 'pay') return 'รอชำระ'; // ตาม Design: ป้ายเทาน้ำตาล รอชำระ
     if (key !== 'ship') return label;
     if (b && b.round2) return label;
     var lv = lotMine(code).filter(isLive); // จ่ายรอบ 1 แล้วแต่ร้านยังไม่สั่งของ = รอสั่งของ
@@ -758,17 +759,17 @@
         var b1 = (d.billing || []).filter(function (x) { return x.preorderCode === code; })[0];
         if (b1 && b1.round1 && b1.round1.totalSatang > 0 && live.some(function (o) { return o.status !== 'คืนเงิน'; })) lotSatang = b1.round1.totalSatang; // ยอดรอบ 1 = ค่าสินค้า + ค่าส่งจีน
         var lotClose = (mine.filter(function (o) { return o.closeAt; })[0] || {}).closeAt || '';
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + (pieces + ' ชิ้น' + (lotSatang > 0 ? ' · ยอดรวม ' + baht(lotSatang) : '')) + '</span>' + (['all', 'new', 'ship', 'inbound'].indexOf(S.myTab) >= 0 ? stageTags(mine, code) : '') + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + (pieces + ' ชิ้น' + (S.myTab === 'pay' && b1 && b1.orderNo ? ' · ออเดอร์ ' + esc(b1.orderNo) : lotSatang > 0 ? ' · ยอดรวม ' + baht(lotSatang) : '')) + '</span>' + (['all', 'pay', 'new', 'ship', 'inbound'].indexOf(S.myTab) >= 0 ? stageTags(mine, code) : '') + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
-          html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
+          html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '">';
           [['รอบ 1', b.round1, 1], ['รอบ 2', b.round2, 2]].forEach(function (x) {
             var r = x[1];
             if (!r) return;
             var sk = code + '|' + x[2];
             var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<div class="pay-due">โอนภายใน ' + esc(dueText(r.dueAt)) + '</div>' : '';
-            var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
-            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน</small>' : '') + '</div>' + badge + '</div>' +
+            var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '';
+            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + badge + '</div>' +
               '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + dueLine +
               (x[2] === 1 && lotSatang > 0 && r.totalSatang > lotSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(lotSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - lotSatang) + '</b></div></div>' : '');
             if (!r.paid) {
@@ -779,7 +780,7 @@
                 html += '<div class="slip-done">✓ ส่งสลิปแล้ว · รอร้านตรวจสอบ<small>' + esc(closeText(r.slipAt)) + '</small></div>' +
                   '<label class="slip-redo' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'ส่งผิด? แนบสลิปใหม่') + inp + '</label>';
               } else {
-                html += payInfoBox(d.paymentInfo) + '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย</p>' +
+                html += (S.myTab === 'pay' ? payInfoBox(d.paymentInfo) + '<p class="small muted pay-note">โอนแล้ว แนบสลิปที่นี่ได้เลย ร้านจะตรวจสอบให้</p>' : '') +
                   '<label class="btn slip-btn' + (busy ? ' is-busy' : '') + '">' + (busy ? '<span class="spin"></span>กำลังส่งสลิป…' : 'แนบสลิป') + inp + '</label>';
               }
             }
@@ -1131,7 +1132,17 @@
   var COPY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
   function payInfoBox(info) {
     if (!info) return '';
-    return '<div class="payinfo"><div class="pi-head">โอนเข้าบัญชี</div><div class="pi-txt">' + esc(info) + '</div><button type="button" class="pi-copy" data-act="copy-acct">' + COPY_ICON + 'คัดลอกเลขบัญชี</button></div>';
+    // แยกข้อความบัญชีเป็น ธนาคาร / เลขบัญชี / ชื่อบัญชี ตาม Design; แยกไม่ได้ก็แสดงข้อความเดิม
+    var lines = String(info).split(/\n+/).map(function (x) { return x.replace(/^[^\wก-๙]+/, '').trim(); }).filter(Boolean);
+    var acct = (String(info).match(/\d[\d\- ]{6,}\d/) || [''])[0].trim();
+    var name = '', bank = '';
+    lines.forEach(function (l) {
+      if (/ชื่อบัญชี/.test(l)) name = l.replace(/^ชื่อบัญชี\s*[:：]?\s*/, '');
+      else if (acct && l.indexOf(acct) >= 0) { /* บรรทัดเลขบัญชี */ }
+      else if (!bank && !/\d{6,}/.test(l)) bank = l;
+    });
+    var body = acct ? '<div class="pb-bank">' + esc(bank) + '</div><div class="pb-row"><span class="pb-no">' + esc(acct) + '</span><button type="button" class="pb-copy" data-act="copy-acct">คัดลอก</button></div>' + (name ? '<div class="pb-name">ชื่อบัญชี ' + esc(name) + '</div>' : '') : '<div class="pi-txt">' + esc(info) + '</div><button type="button" class="pb-copy" data-act="copy-acct">คัดลอก</button>';
+    return '<div class="payinfo pbox"><div class="pb-head">โอนเข้าบัญชี</div>' + body + '</div>';
   }
 
   var toastTimer = null;
@@ -1351,6 +1362,19 @@
 
   var topBack = document.querySelector('[data-top-back]');
   if (topBack) topBack.addEventListener('click', function () { if (S.screen === 'detail' || S.screen === 'cancel' || S.screen === 'edit') { S.cancel = null; S.editPage = null; setScreen('my'); return; } setScreen('order'); refreshTotal(); loadBootstrap().then(function () { if (S.screen === 'order') { render(); refreshTotal(); } }).catch(function () {}); });
+  // ปัดจากขอบซ้ายไปขวา = ย้อนกลับ (เหมือนปุ่ม ‹) ใช้ในหน้าออเดอร์ของฉัน/รายละเอียด/แก้ไข/ยกเลิก
+  (function () {
+    var sx = 0, sy = 0, st = 0, tracking = false;
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; tracking = e.touches.length === 1 && t.clientX <= 32 && ['my', 'detail', 'edit', 'cancel'].indexOf(S.screen) >= 0 && !document.querySelector('dialog[open], .modal.show');
+      sx = t.clientX; sy = t.clientY; st = Date.now();
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!tracking) return; tracking = false;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+      if (dx >= 70 && dy < dx * 0.6 && Date.now() - st < 800 && topBack) topBack.click();
+    }, { passive: true });
+  })();
 
   // แผ่นรายละเอียดสินค้าอยู่นอก #app (วาดหน้าใหม่แล้วไม่หาย) จึงมีตัวฟังเหตุการณ์ของตัวเอง
   document.addEventListener('click', function (ev) {

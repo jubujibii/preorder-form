@@ -171,9 +171,10 @@
   function payBanner() {
     var p = S.my && S.my.billing ? pendingPayment(S.my.billing) : S.pending;
     if (!p || !p.count) return '';
-    return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><strong>มียอดค้างชำระ ' + baht(p.totalSatang) + '</strong><span>' + p.count + ' รายการ · โอนแล้วแนบสลิปได้ในหน้าออเดอร์ของฉัน</span></div>' +
-      '<button type="button" class="btn pb-btn" data-act="my">ดูและชำระ</button></div></div>';
+    return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><span class="pb-k">ยอดที่ต้องชำระ</span><strong>' + baht(p.totalSatang) + '</strong><span class="pb-s">' + p.count + ' รายการรอชำระ</span></div>' +
+      '<button type="button" class="btn pb-btn" data-act="my">ชำระ / แนบสลิป</button></div></div>';
   }
+  var CHECK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
   var REFRESH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>';
   function refreshBtn(act, busy) {
     return '<button type="button" class="refresh ic' + (busy ? ' spin' : '') + '" data-act="' + act + '" aria-label="รีเฟรช"' + (busy ? ' disabled' : '') + '>' + REFRESH_ICON + '</button>';
@@ -307,7 +308,7 @@
     var urgent = urgencyText(p.closeAt);
     var body = [flexText(p.name, { weight: 'bold', size: 'md' }), flexText(priceLabel(p), { weight: 'bold', size: 'lg', color: '#C2472B', margin: 'sm' }),
       flexText('Lot ' + p.preorderCode + ' · ปิดรับ ' + closeText(p.closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
-    if (urgent) body.push(flexText('⏰ ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'sm' }));
+    if (urgent) body.push(flexText(urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'sm' }));
     var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'สั่งเลย', uri: shareLink('p=' + encodeURIComponent(pid)) } }] } };
     if (/^https:\/\//.test(p.imageUrl || '')) bubble.hero = { type: 'image', url: p.imageUrl, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' };
     sharePick([{ type: 'flex', altText: p.name + ' ' + priceLabel(p) + ' · สั่งเลยที่ PRE2PET', contents: bubble }], 'แชร์แล้ว ✓');
@@ -321,7 +322,7 @@
     });
     if (items.length > shown.length) rows.push(flexText('และอีก ' + (items.length - shown.length) + ' รายการ', { size: 'xs', color: '#8C7A6D', margin: 'sm' }));
     var body = [flexText('พรีออเดอร์ Lot ' + code, { weight: 'bold', size: 'lg' }), flexText('ปิดรับ ' + closeText(items[0].closeAt), { size: 'xs', color: '#8C7A6D', margin: 'sm' })];
-    if (urgent) body.push(flexText('⏰ ใกล้ปิดแล้ว ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'md' }));
+    if (urgent) body.push(flexText('ใกล้ปิดแล้ว ' + urgent, { size: 'sm', color: '#C2362B', weight: 'bold', margin: 'md' }));
     body.push({ type: 'separator', margin: 'md' });
     var bubble = { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: body.concat(rows) }, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#E5704A', action: { type: 'uri', label: 'ดูและสั่งเลย', uri: shareLink('lot=' + encodeURIComponent(code)) } }] } };
     sharePick([{ type: 'flex', altText: 'พรีออเดอร์ Lot ' + code + (urgent ? ' · ' + urgent : '') + ' · PRE2PET', contents: bubble }], 'แชร์ Lot แล้ว ✓');
@@ -331,12 +332,12 @@
     if (type === 'p') {
       var p = productsById().get(id);
       if (!p) return '';
-      return p.name + ' ' + priceLabel(p) + '\n📌 : ' + shareLink('p=' + encodeURIComponent(id));
+      return p.name + ' ' + priceLabel(p) + '\nสั่งได้ที่ลิงก์นี้: ' + shareLink('p=' + encodeURIComponent(id));
     }
     var items = S.products.filter(function (x) { return x.preorderCode === id; });
     if (!items.length) return '';
     var los = items.map(function (x) { return priceBounds(x).lo; }), his = items.map(function (x) { return priceBounds(x).hi; }), lo = Math.min.apply(null, los), hi = Math.max.apply(null, his);
-    return 'สินค้าเปิดใหม่ Lot ' + id + ' ค่าา\nราคา ' + (lo === hi ? baht(lo * 100) : baht(lo * 100) + ' - ' + baht(hi * 100)) + '\n📌 : ' + shareLink('lot=' + encodeURIComponent(id));
+    return 'สินค้าเปิดใหม่ Lot ' + id + ' ค่ะ\nราคา ' + (lo === hi ? baht(lo * 100) : baht(lo * 100) + ' - ' + baht(hi * 100)) + '\nสั่งได้ที่ลิงก์นี้: ' + shareLink('lot=' + encodeURIComponent(id));
   }
   function closeShareMenu() { var m = document.getElementById('share-menu'); if (m) m.remove(); }
   function openShareMenu(btn, type, id) {
@@ -389,12 +390,14 @@
   }
   // แถบเมนูล่าง ใช้ร่วมกันที่หน้าสั่งสินค้ากับหน้าออเดอร์ของฉัน (แท็บที่ตรงกับหน้านั้นไฮไลต์ แตะแล้วเลื่อนขึ้นบน)
   function tabbarHtml(active) {
+    var pp = S.my && S.my.billing ? pendingPayment(S.my.billing) : S.pending;
     function tab(key, icon, label, act) {
       var on = key === active;
-      return '<button type="button" class="tb' + (on ? ' on' : '') + '" data-act="' + (on ? 'top' : act) + '"' + (on ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span></button>';
+      var dot = key === 'my' && pp && pp.count ? '<i class="tdot" aria-label="มียอดค้างชำระ ' + pp.count + ' รายการ">' + pp.count + '</i>' : '';
+      return '<button type="button" class="tb' + (on ? ' on' : '') + '" data-act="' + (on ? 'top' : act) + '"' + (on ? ' aria-current="page"' : '') + '><span class="pill">' + icon + dot + '</span><span>' + label + '</span></button>';
     }
     return '<nav class="tabbar" aria-label="เมนูหลัก">' + tab('order', BAG_ICON, 'สั่งสินค้า', 'more') + tab('my', RECEIPT_ICON, 'ออเดอร์ของฉัน', 'my') +
-      '<a class="tb" href="' + esc(adminChatUrl(OA_ID)) + '">' + CHAT_ICON + '<span>ติดต่อร้าน</span></a></nav>';
+      '<a class="tb" href="' + esc(adminChatUrl(OA_ID)) + '"><span class="pill">' + CHAT_ICON + '</span><span>ติดต่อร้าน</span></a></nav>';
   }
   function variantRow(p, o, oi, hasOptImg) {
     var k = qtyKey(p.productId, o), q = S.qty[k] || 0, oimg = (p.optionImages || [])[oi] || '';
@@ -576,7 +579,7 @@
         html += '</div></details>';
       });
       html +=
-        '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่ง)</div><strong id="total">฿0</strong></div>' +
+        '<div class="bar"><div class="bar-in"><div><div class="label">ค่าสินค้าเท่านั้น (ยังไม่รวมค่าส่งและค่านำเข้า)</div><strong id="total">฿0</strong></div>' +
         '<button class="btn primary" id="submit" data-act="submit" disabled>ส่งออเดอร์</button></div></div>';
       return html;
     },
@@ -645,6 +648,19 @@
         if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 1)) + '</button>';
         return '<span class="g-tags' + (open && keys.length > 2 ? ' is-open' : '') + '">' + chips + '</span>';
       }
+      // เส้นไทม์ไลน์ 4 ขั้นของ Lot: ขั้นที่ช้าที่สุดของรายการที่ยังไม่ถูกคืนเงิน/ยกเลิก (ยังเป็น รับออเดอร์ = ไม่แสดง)
+      function lotTimeline(live) {
+        var RANK = { 'สั่งของแล้ว': 0, 'ออกจากจีน': 1, 'ถึงไทย': 2, 'แพ็กแล้ว': 3, 'ส่งแล้ว': 3, 'สำเร็จ': 3 };
+        var items = live.filter(function (o) { return o.status !== 'คืนเงิน'; });
+        if (!items.length) return '';
+        var min = 9;
+        for (var i = 0; i < items.length; i++) { var r = RANK[items[i].status]; if (r === undefined) return ''; min = Math.min(min, r); }
+        var names = ['สั่งของแล้ว', 'ออกจากจีน', 'ถึงไทย', 'ส่งแล้ว'], done = items.every(function (o) { return o.status === 'สำเร็จ'; });
+        return '<div class="tl" aria-label="สถานะ: ' + names[min] + '">' + names.map(function (n, k) {
+          var cls = done || k < min ? ' done' : k === min ? ' now' : '';
+          return '<div class="st' + cls + '"><i>' + (done || k < min ? CHECK_ICON : '') + '</i>' + n + '</div>';
+        }).join('') + '</div>';
+      }
       function renderGroups(list) {
         var html = '';
         var codes = newestFirstCodes(list);
@@ -656,7 +672,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>';
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -665,9 +681,9 @@
             if (!r) return;
             var sk = code + '|' + x[2];
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
-            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งจีน</small>' : '') + '</div>' + badge + '</div>' +
+            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน</small>' : '') + '</div>' + badge + '</div>' +
               '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' +
-              (x[2] === 1 && lotSatang > 0 && r.totalSatang > lotSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(lotSatang) + '</b></div><div><span>ค่าส่งจีน</span><b>' + baht(r.totalSatang - lotSatang) + '</b></div></div>' : '');
+              (x[2] === 1 && lotSatang > 0 && r.totalSatang > lotSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(lotSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - lotSatang) + '</b></div></div>' : '');
             if (!r.paid) {
               var busy = S.slipBusy === sk;
               if (S.slipErr[sk] && !busy) html += '<div class="slip-fail" role="alert"><strong>⚠ แนบสลิปไม่สำเร็จ</strong><span>' + esc(S.slipErr[sk]) + '</span><span class="small">สลิปยังไม่ถูกส่งถึงร้าน กดแนบสลิปอีกครั้ง หรือติดต่อแอดมิน</span></div>';
@@ -730,7 +746,7 @@
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
               '<div class="edit-btns"><button type="button" class="btn primary" data-act="edit-save" data-k="' + esc(ck) + '"' + (S.busy || S.edit.qty === o.qty ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึก') + '</button><button type="button" class="btn" data-act="edit-cancel"' + (S.busy ? ' disabled' : '') + '>ปิด</button></div>' +
-              '<p class="small muted">แก้ได้เฉพาะลดจำนวน ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</p></div>';
+              '<p class="small muted">ปรับลดจำนวนได้อย่างเดียว ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</p></div>';
           } else if (o.canCancel && S.confirmCancel === ck) {
             html += '<div class="cancel-confirm"><span>ยกเลิกรายการนี้ใช่ไหม</span><button type="button" class="btn danger" data-act="cancel-yes" data-k="' + esc(ck) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '<span class="spin"></span>กำลังยกเลิก…' : 'ยืนยันยกเลิก') + '</button><button type="button" class="btn" data-act="cancel-no"' + (S.busy ? ' disabled' : '') + '>ไม่ยกเลิก</button></div>';
           }
@@ -757,7 +773,7 @@
         if (waiting.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>รอตรวจสอบ</h2><p class="small muted sec-note">แนบสลิปแล้ว รอร้านตรวจสอบยอด</p>' + renderGroups(waiting);
       } else if (S.myTab === 'new' && shown.length) {
         // รอแจ้งยอด แยกเป็นรอบ 1 (สั่งแล้ว รอร้านแจ้งยอดสินค้า+ส่งจีน) และรอบ 2 (ของถึงไทยแล้ว รอร้านแจ้งค่านำเข้า+ส่งไทย)
-        [['round1', 'รอแจ้งยอดรอบ 1', 'รับออเดอร์แล้ว ร้านจะแจ้งยอดค่าสินค้า + ส่งจีนทางแชท LINE เมื่อปิดพรี', function (o) { return o.status !== 'ถึงไทย'; }],
+        [['round1', 'รอแจ้งยอดรอบ 1', 'รับออเดอร์แล้ว ร้านจะแจ้งยอดค่าสินค้า + ส่งในจีนทางแชท LINE เมื่อปิดพรี', function (o) { return o.status !== 'ถึงไทย'; }],
          ['round2', 'รอแจ้งยอดรอบ 2', 'ของถึงไทยแล้ว ร้านจะแจ้งยอดค่านำเข้า + ส่งในไทยทางแชท LINE', function (o) { return o.status === 'ถึงไทย'; }]].forEach(function (g) {
           var part = shown.filter(g[3]);
           if (part.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>' + g[1] + '</h2><p class="small muted sec-note">' + g[2] + '</p>' + renderGroups(part);
@@ -833,7 +849,7 @@
       return html + '<section class="dcard"><div class="dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
         '<div><div class="dlot">Lot ' + esc(e.code) + '</div><div class="dmeta">' + pieces + ' ชิ้น<span class="g-sep"></span><strong class="g-sum">' + baht(total) + '</strong></div></div></div>' +
         body +
-        '<div class="ep-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span>สามารถปรับลดจำนวนได้เท่านั้น</span></div>' +
+        '<div class="ep-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span>ปรับลดจำนวนได้อย่างเดียว ถ้าต้องการเพิ่ม ให้สั่งเพิ่มจากหน้าสั่งสินค้า</span></div>' +
         '<div class="lotfoot"><span>รวม ' + all.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(total) + '</strong></span></div></section>' +
         '<div class="cx-btns"><button type="button" class="btn" data-act="ep-cancel"' + (e.busy ? ' disabled' : '') + '>ยกเลิก</button><button type="button" class="btn primary" data-act="ep-save"' + (e.busy || !dirty ? ' disabled' : '') + '>' + (e.busy ? '<span class="spin"></span>กำลังบันทึก…' : 'บันทึกการแก้ไข') + '</button></div>';
     },
@@ -918,7 +934,7 @@
       }
       if (res.error === 'closed') { S.error = 'Lot นี้ปิดรับแล้ว ออเดอร์ของคุณยังไม่ถูกบันทึก'; return loadBootstrap().then(function () { render(); }); }
       if (res.error === 'not_registered') return setScreen('register');
-      S.error = res.error === 'bad_request' ? (res.message || 'ข้อมูลไม่ถูกต้อง ตรวจรายการแล้วลองใหม่') : 'ส่งออเดอร์ไม่สำเร็จ กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ';
+      S.error = res.error === 'bad_request' ? (res.message || 'ส่งออเดอร์ไม่ได้ เพราะข้อมูลบางอย่างไม่ถูกต้อง ลองเช็กรายการที่เลือกแล้วส่งอีกครั้ง') : 'ส่งออเดอร์ไม่สำเร็จ กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ';
       render(); refreshTotal();
     }).catch(function () {
       S.busy = false;
@@ -1006,8 +1022,8 @@
     var a = S.delAsk;
     if (!a) return '';
     return '<div class="dlg-ov" data-act="del-bg"><div class="dlg" role="dialog" aria-modal="true"><button type="button" class="dlg-x" data-act="del-no" aria-label="ปิด">×</button>' +
-      '<div class="dlg-ico">' + TRASH_ICON + '</div><h2>ยืนยันการลบรายการนี้?</h2><p>ต้องการลบ “' + esc(a.label) + '” ออกจากออเดอร์ใช่หรือไม่</p>' +
-      '<div class="dlg-btns"><button type="button" class="btn" data-act="del-no"' + (a.busy ? ' disabled' : '') + '>ยกเลิก</button>' +
+      '<div class="dlg-ico">' + TRASH_ICON + '</div><h2>ยืนยันการลบรายการนี้?</h2><p>ต้องการลบ “' + esc(a.label) + '” ออกจากออเดอร์ใช่หรือไม่ ลบแล้วกู้คืนไม่ได้</p>' +
+      '<div class="dlg-btns"><button type="button" class="btn" data-act="del-no"' + (a.busy ? ' disabled' : '') + '>ไม่ลบ</button>' +
       '<button type="button" class="btn primary" data-act="del-yes"' + (a.busy ? ' disabled' : '') + '>' + (a.busy ? '<span class="spin"></span>กำลังลบ…' : 'ลบรายการ') + '</button></div></div></div>';
   }
 
@@ -1106,7 +1122,7 @@
       return api('myOrders').then(function (m) { if (m.ok) { S.my = m } });
     }).catch(function (e) {
       var code = e && (e.code || (e instanceof TypeError ? 'network' : ''));
-      S.slipErr[sk] = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'เกิดข้อผิดพลาดจากระบบ' + (code ? ' (รหัส: ' + code + ')' : '');
+      S.slipErr[sk] = e && e.message === 'bad_image' ? 'เปิดรูปนี้ไม่ได้ ลองเลือกรูปสลิปอีกครั้ง' : e && e.message === 'too_big' ? 'รูปใหญ่เกินไป ลองแคปหน้าจอสลิปแล้วแนบใหม่' : 'ส่งสลิปไม่สำเร็จ ลองอีกครั้ง ถ้ายังไม่ได้ให้ติดต่อแอดมิน' + (code ? ' พร้อมแจ้งรหัส: ' + code : '');
       if (window.console) console.error('uploadSlip failed', e);
     }).then(function () { S.slipBusy = ''; keepScroll(); });
   }

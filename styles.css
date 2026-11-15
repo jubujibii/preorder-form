@@ -1299,3 +1299,8 @@ body[data-screen="detail"] .dpay-bar { bottom: 0; left: 0; right: 0; padding: 10
 /* ระยะห่างคงเดิม (8px / บน 4px) ย่อเฉพาะขนาดชิป */
 .bb-chips { gap: 8px; padding-top: 2px; }
 .bb-chip { padding: 5px 2px; font-size: 13px; }
+
+/* หน้าออเดอร์ของฉัน: หน้าว่างอยู่กึ่งกลางพื้นที่ที่เหลือใต้การ์ด "การซื้อของฉัน" */
+body[data-screen="my"] #app { display: flex; flex-direction: column; box-sizing: border-box; min-height: calc(100svh - var(--hdr-h, 59px)); }
+body[data-screen="my"] #app > .buyblock { flex: none; }
+body[data-screen="my"] #app > .empty { flex: 1 1 auto; min-height: 0; padding: 0 16px 24px; justify-content: center; }

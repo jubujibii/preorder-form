@@ -1082,3 +1082,16 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .dcard.dtl .tl { display: flex; align-items: flex-start; padding: 0 8px 10px; }
 .tl-cap { margin: 0 0 12px; text-align: center; font-size: 13px; color: var(--muted); }
 .dcard.dtl .tl-cap { margin: 0 0 10px; }
+
+/* ===== การ์ด Lot ในหน้าออเดอร์: เปิดตลอด (ไม่มีย่อ/ขยาย) และรายการสินค้าเป็นแถวเดียวตามดีไซน์ใหม่ ===== */
+.group[data-scope="my"] > summary::after { display: none; }
+.group[data-scope="my"] > summary { cursor: pointer; }
+.pblock.is-flat { padding: 10px 0; }
+.pblock.is-flat .orow.flat { padding: 0; }
+.pblock.is-flat .orow.flat .obody { flex: 1 1 auto; min-width: 0; }
+.pblock.is-flat .orow.flat .orow-main { min-height: 56px; }
+.orow .oname.pn { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 600; font-size: 15px; line-height: 1.35; }
+.drow.is-ended .dname, .drow.is-ended .dsmall, .drow.is-ended .dunit, .drow.is-ended .dprice { text-decoration: line-through; color: var(--muted); }
+.drow.is-ended .my-pimg { opacity: .5; filter: grayscale(1); }
+.pblock.is-flat .my-pimg { width: 56px; height: 56px; border-radius: 12px; flex: 0 0 auto; object-fit: cover; }
+.pblock.is-flat .my-pimg.ph { display: block; background: var(--accent-soft); }

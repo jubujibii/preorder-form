@@ -69,6 +69,12 @@
     var late = etas.every(Boolean) ? etas.slice().sort().pop() : '';
     return '<p class="tl-cap">ของออกจากจีน กำลังเดินทางมาไทย' + (late ? ' · คาดว่าถึง ' + esc(etaText(late)) : '') + '</p>';
   }
+  // ป้ายสถานะของ Lot: ขั้น "รอจัดส่ง" ที่ร้านยังไม่แจ้งยอดรอบ 2 ให้แสดงเป็น "รอแจ้งยอดรอบ 2" (ลูกค้ารออะไรอยู่ชัดกว่า)
+  function stageTagLabel(key, label, billing, code) {
+    if (key !== 'ship') return label;
+    var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
+    return b && b.round2 ? label : 'รอแจ้งยอดรอบ 2';
+  }
   function lotPaid(billing, code) {
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
     return !!(b && b.round1 && b.round1.paid);
@@ -680,7 +686,7 @@
         var keys = STAGE_ORDER.filter(function (k) { return n[k]; });
         var open = !!(S.tagsOpen && S.tagsOpen[code]);
         var shownKeys = keys.length > 2 && !open ? keys.slice(0, 1) : keys;
-        var chips = shownKeys.map(function (k) { return '<span class="stage s-' + k + '">' + esc(labelOf[k]) + '</span>'; }).join('');
+        var chips = shownKeys.map(function (k) { return '<span class="stage s-' + k + '">' + esc(stageTagLabel(k, labelOf[k], d.billing, code)) + '</span>'; }).join('');
         if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 1)) + '</button>';
         return '<span class="g-tags' + (open && keys.length > 2 ? ' is-open' : '') + '">' + chips + '</span>';
       }
@@ -695,7 +701,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live, lotPaid(d.billing, code)) : '');
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -745,14 +751,16 @@
           });
         }
         var ordered = S.myTab === 'all' ? cluster(live).concat(cluster(dead)) : cluster(mine);
-        var openBlock = false;
+        var openBlock = false, flatBlock = false;
         function closeBlock() { if (openBlock) { html += '</div>'; openBlock = false; } }
         ordered.forEach(function (o, idx) {
           var split = S.myTab === 'all' && live.length && dead.length && idx === live.length;
           if (split) { closeBlock(); html += '<div class="cancelled-head">ยกเลิกแล้ว · ไม่นับในยอดด้านบน</div>' ; }
           if (idx === 0 || ordered[idx - 1].productId !== o.productId || split) {
             closeBlock();
-            html += '<div class="pblock' + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '"><div class="phead">' + thumb(o) + '<div class="pname">' + esc(o.productName) + '</div></div>';
+            var sameLines = ordered.filter(function (x) { return x.productId === o.productId && (x.status === 'ยกเลิก') === (o.status === 'ยกเลิก'); }).length;
+            flatBlock = sameLines === 1;
+            html += '<div class="pblock' + (flatBlock ? ' is-flat' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + '">' + (flatBlock ? '' : '<div class="phead">' + thumb(o) + '<div class="pname">' + esc(o.productName) + '</div></div>');
             openBlock = true;
           }
           var ck = qtyKey(o.productId, o.option);
@@ -764,8 +772,8 @@
             acts = (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-k="' + esc(ck) + '" data-qty="' + o.qty + '" data-code="' + esc(o.preorderCode) + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<span class="ibtn ph" aria-hidden="true"></span>') +
               '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(ck) + '" data-code="' + esc(o.preorderCode) + '" data-label="' + esc(o.option || o.productName) + '" aria-label="ลบรายการนี้">' + TRASH_ICON + '</button>';
           }
-          html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (o.option ? '' : ' noimg') + '">' + (o.option ? optThumb(o) : '') + '<div class="obody"><div class="orow-main' + (o.option ? ' has-opt' : '') + '">' +
-            '<span class="otxt">' + (o.option ? '<span class="oname">' + esc(o.option) + '</span>' : '') + '<span class="osub">' + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span></span>' +
+          html += '<div class="orow' + (working ? ' saving' : '') + (o.status === 'ยกเลิก' ? ' is-cancelled' : '') + (flatBlock ? ' flat' : (o.option ? '' : ' noimg')) + '">' + (flatBlock ? (thumb(o.optionImageUrl ? { imageUrl: o.optionImageUrl } : o) || '<span class="my-pimg ph"></span>') : (o.option ? optThumb(o) : '')) + '<div class="obody"><div class="orow-main' + (o.option && !flatBlock ? ' has-opt' : '') + '">' +
+            '<span class="otxt">' + (flatBlock ? '<span class="oname pn">' + esc(o.productName) + '</span>' : (o.option ? '<span class="oname">' + esc(o.option) + '</span>' : '')) + '<span class="osub">' + (flatBlock && o.option ? esc(o.option) + ' · ' : '') + (unit != null ? baht(unit * 100) + ' × ' + o.qty : '× ' + o.qty) + '</span></span>' +
             '<span class="oprice">' + (unit != null ? baht(unit * o.qty * 100) : '') + '</span><span class="oact">' + acts + '</span></div>';
           if (o.canCancel && S.edit && S.edit.k === ck) {
             html += '<div class="edit-qty"><span>แก้จำนวน</span><span class="stepper"><button type="button" data-act="edit-dec" aria-label="ลดจำนวน"' + (S.busy || S.edit.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + S.edit.qty + '</output><button type="button" data-act="edit-inc" aria-label="เพิ่มจำนวน"' + (S.busy || S.edit.qty >= o.qty ? ' disabled' : '') + '>+</button></span>' +
@@ -820,14 +828,15 @@
     detail: function () {
       var d = S.my, code = S.detailCode;
       if (!d) return '<p class="center muted">กำลังโหลด…</p>';
-      var mine = lotMine(code), live = mine.filter(isLive);
-      if (!live.length) return '<p class="muted center">ไม่พบรายการของ Lot นี้</p><button class="btn block" data-act="detail-back">กลับ</button>';
+      var mine = lotMine(code), live = mine.filter(isLive), ended = !live.length;
+      if (!mine.length) return '<p class="muted center">ไม่พบรายการของ Lot นี้</p><button class="btn block" data-act="detail-back">กลับ</button>';
+      if (ended) live = mine; // Lot ที่ยกเลิก/คืนเงินทั้งหมด: ยังแสดงรายการ (ขีดฆ่า) แต่ไม่นับยอด
       var pieces = 0, total = 0, prods = {};
-      live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null) total += o.priceThb * o.qty * 100; });
+      live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null && !ended) total += o.priceThb * o.qty * 100; });
       var me = d.customer;
       var rows = live.map(function (o) {
         var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
-        return '<div class="drow">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname dopt">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
+        return '<div class="drow' + (ended ? ' is-ended' : '') + '">' + img + '<div class="dbody">' + (o.option ? '<div class="dsmall">' + esc(o.productName) + '</div><div class="dname dopt">' + esc(o.option) + '</div>' : '<div class="dname">' + esc(o.productName) + '</div>') +
           '<div class="dunit">' + (o.priceThb != null ? baht(o.priceThb * 100) + ' × ' + o.qty : '× ' + o.qty) + '</div></div>' +
           '<div class="dprice">' + (o.priceThb != null ? baht(o.priceThb * o.qty * 100) : '') + '</div></div>';
       }).join('');
@@ -1000,11 +1009,12 @@
   }
   function isLive(o) { return o.status !== 'ยกเลิก' && o.status !== 'คืนเงิน'; }
   function lotStageLabel(code) {
-    var d = S.my, mine = lotMine(code).filter(isLive);
+    var d = S.my, all0 = lotMine(code), mine = all0.filter(isLive);
+    if (d && all0.length && !mine.length) return all0.every(function (o) { return o.status === 'คืนเงิน'; }) ? 'คืนเงินแล้ว' : 'ยกเลิกแล้ว';
     if (!d || !mine.length) return '';
     var st = paymentStateByPreorder(d.billing)[code] || lineTab(mine[0], d.billing), lab = {};
     ORDER_TABS.forEach(function (t) { lab[t.key] = t.label; });
-    return (lab[st] || '') + (st === 'new' ? ' รอบ 1' : '');
+    return stageTagLabel(st, lab[st] || '', d.billing, code) + (st === 'new' ? ' รอบ 1' : '');
   }
   function openDetail(code) { S.detailCode = code; setScreen('detail'); }
   function openEdit(code) {
@@ -1388,7 +1398,6 @@
     var sm = ev.target.closest('details.group[data-scope="my"] > summary');
     if (!sm || ev.target.closest('[data-act]')) return;
     var r = sm.getBoundingClientRect();
-    if (ev.clientX >= r.right - 56) return;
     ev.preventDefault();
     openDetail(sm.parentNode.getAttribute('data-code'));
   });

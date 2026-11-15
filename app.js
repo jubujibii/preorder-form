@@ -1118,10 +1118,11 @@
             var r = x[1];
             if (!r || (onlyUnpaid && r.paid)) return;
             var sk = code + '|' + x[2];
-            var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<div class="pay-due">โอนภายใน ' + esc(dueText(r.dueAt)) + '</div>' : '';
+            var dueUrgent = r.dueAt && new Date(r.dueAt).getTime() - Date.now() < 24 * 3600 * 1000;
+            var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<span class="pay-due' + (dueUrgent ? ' urgent' : '') + '">' + (onlyUnpaid ? 'โอนภายใน ' : 'ภายใน ') + esc(dueText(r.dueAt)) + '</span>' : '';
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '';
-            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + badge + '</div>' +
-              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + dueLine +
+            html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน' + (r.paid && b.orderNo ? ' · ' + esc(b.orderNo) : '') + '</small>' : '') + '</div>' + (badge || (onlyUnpaid ? '' : dueLine)) + '</div>' +
+              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + (onlyUnpaid ? dueLine : '') +
               (x[2] === 1 && goodsSatang > 0 && r.totalSatang > goodsSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(goodsSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - goodsSatang) + '</b></div></div>' : '');
             if (!r.paid) {
               var busy = S.slipBusy === sk;

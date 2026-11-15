@@ -1181,3 +1181,8 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 
 /* หน้าแก้ไข: เส้นแบ่งใต้หัว Lot เหลือเส้นเดียว (ก่อนหน้านี้เส้นล่างของหัวซ้อนกับเส้นบนของรายการแรก) */
 .dcard .dhead + .pblock, .dcard .dhead + .eprow { border-top: 0; margin-top: 0; }
+
+/* หน้ารายละเอียด Lot ตาม Design: ชื่อ Lot + ป้ายสถานะที่แถบบน, ข้อมูลจัดส่งแบบป้ายกำกับ/ค่า */
+.member.is-stage{background:#dde9fb;color:#1d4f91;font-weight:600}
+.dgrid{display:grid;grid-template-columns:84px 1fr;gap:6px 12px;font-size:15px;line-height:1.5}
+.dgrid .sub{color:var(--muted,#8c7a6d)}

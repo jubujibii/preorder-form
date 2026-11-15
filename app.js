@@ -81,6 +81,7 @@
   // ข้อความใต้ไทม์ไลน์: รอร้านสั่งของ / ออกจากจีน (+ วันที่คาดว่าจะถึง ถ้าทุกรายการมีวันที่ ใช้วันที่ช้าที่สุด)
   function tlCaption(items, min) {
     if (min < 0) return '<p class="tl-cap">ชำระแล้ว รอร้านสั่งของจากจีน</p>';
+    if (min === 0) return '<p class="tl-cap">ร้านสั่งของจากจีนแล้ว รอของออกจากจีน</p>';
     if (min !== 1) return '';
     var etas = items.map(function (o) { return o.etaAt || ''; });
     var late = etas.every(Boolean) ? etas.slice().sort().pop() : '';
@@ -210,8 +211,11 @@
   function render() {
     document.body.setAttribute('data-screen', S.screen);
     var ttl = document.querySelector('.top-title'); if (ttl) ttl.textContent = S.screen === 'detail' ? 'รายละเอียดออเดอร์' : S.screen === 'cancel' ? 'ยกเลิกออเดอร์' : S.screen === 'edit' ? 'แก้ไขออเดอร์' : 'ออเดอร์ของฉัน';
-    memberEl.hidden = !S.memberCode;
-    memberEl.textContent = S.memberCode;
+    var onDetail = S.screen === 'detail' && S.detailCode && S.my;
+    if (onDetail && ttl) ttl.textContent = 'Lot ' + S.detailCode;
+    memberEl.hidden = onDetail ? false : !S.memberCode;
+    memberEl.textContent = onDetail ? lotStageLabel(S.detailCode) : S.memberCode;
+    memberEl.classList.toggle('is-stage', !!onDetail);
     if (S.screen !== 'order' && S.sheet) closeSheet();
     var fn = SCREENS[S.screen] || SCREENS.error;
     var prevTabs = app.querySelector('.stickytabs'), prevLeft = prevTabs ? prevTabs.scrollLeft : null;
@@ -744,6 +748,8 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
+        var b1 = (d.billing || []).filter(function (x) { return x.preorderCode === code; })[0];
+        if (b1 && b1.round1 && b1.round1.totalSatang > 0 && live.some(function (o) { return o.status !== 'คืนเงิน'; })) lotSatang = b1.round1.totalSatang; // ยอดรอบ 1 = ค่าสินค้า + ค่าส่งจีน
         var lotClose = (mine.filter(function (o) { return o.closeAt; })[0] || {}).closeAt || '';
         html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ' open' + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + (pieces + ' ชิ้น' + (lotSatang > 0 ? ' · ยอดรวม ' + baht(lotSatang) : '')) + '</span>' + (['all', 'new', 'ship', 'inbound'].indexOf(S.myTab) >= 0 ? stageTags(mine, code) : '') + '</summary>' + (['all', 'ship', 'inbound', 'done'].indexOf(S.myTab) >= 0 ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
@@ -828,6 +834,8 @@
       if (ended) live = mine; // Lot ที่ยกเลิก/คืนเงินทั้งหมด: ยังแสดงรายการ (ขีดฆ่า) แต่ไม่นับยอด
       var pieces = 0, total = 0, prods = {};
       live.forEach(function (o) { pieces += o.qty; prods[o.productId] = 1; if (o.priceThb != null && !ended) total += o.priceThb * o.qty * 100; });
+      var bd = (d.billing || []).filter(function (x) { return x.preorderCode === code; })[0];
+      if (!ended && bd && bd.round1 && bd.round1.totalSatang > 0) total = bd.round1.totalSatang; // รวมค่าส่งจีน
       var me = d.customer;
       var rows = live.map(function (o) {
         var oi = o.optionImageUrl || o.imageUrl, img = oi ? '<img class="pimg my-pimg" src="' + esc(oi) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
@@ -837,15 +845,11 @@
           (!ended && o.canCancel ? '<div class="dact">' + (o.qty > 1 ? '<button type="button" class="ibtn edit" data-act="edit-open" data-code="' + esc(code) + '" aria-label="แก้จำนวน">' + EDIT_ICON + '</button>' : '<button type="button" class="ibtn edit" disabled aria-label="แก้จำนวนไม่ได้ (สั่งชิ้นเดียว)">' + EDIT_ICON + '</button>') +
             '<button type="button" class="ibtn del" data-act="cancel-ask" data-k="' + esc(qtyKey(o.productId, o.option)) + '" data-code="' + esc(code) + '" data-label="' + esc(o.option || o.productName) + '" aria-label="ลบรายการนี้">' + TRASH_ICON + '</button></div>' : '') + '</div>';
       }).join('');
-      return '<section class="dcard dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
-        '<div><div class="dlot">Lot ' + esc(code) + '</div><div class="dmeta">' + pieces + ' ชิ้น</div><span class="stage dchip' + (lotStageKey(code) ? ' s-' + lotStageKey(code).replace(' r2', ' r2') : '') + '">' + esc(lotStageLabel(code)) + '</span></div></section>' +
-        (function () { var t = lotTimeline(live, lotPaid(d.billing, code)); return t ? '<section class="dcard dtl">' + t + '</section>' : ''; })() +
+      return (function () { var t = lotTimeline(live, lotPaid(d.billing, code)); return t ? '<section class="dcard dtl">' + t + '</section>' : ''; })() +
         '<section class="dcard"><h2 class="dtitle">รายการสินค้า (' + live.length + ' รายการ)</h2>' + rows +
         '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(total) + '</strong></span></div></section>' +
         (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +
-          (me.recipientName ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>' + esc(me.recipientName) + '</span></div>' : '') +
-          (me.phone ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>' + esc(me.phone) + '</span></div>' : '') +
-          (me.address ? '<div class="dinfo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>' + esc(me.address) + '</span></div>' : '') +
+          '<div class="dgrid">' + (me.recipientName ? '<span class="sub">ผู้รับ</span><span>' + esc(me.recipientName) + '</span>' : '') + (me.phone ? '<span class="sub">เบอร์โทร</span><span>' + esc(me.phone) + '</span>' : '') + (me.address ? '<span class="sub">ที่อยู่</span><span>' + esc(me.address) + '</span>' : '') + '</div>' +
           '<p class="small muted">ต้องการแก้ไขข้อมูลจัดส่ง แจ้งแอดมินทางแชท</p></section>' : '') +
         '<button class="btn block" data-act="detail-back">กลับ</button>' + delDialog();
     },

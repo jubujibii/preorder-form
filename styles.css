@@ -1169,3 +1169,15 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .group[data-scope="my"] > summary { padding: 14px 0 10px; }
 .group[data-scope="my"] > .sumline { padding: 12px 0 12px; min-height: 0; }
 .group[data-scope="my"] > summary .g-meta { color: var(--muted); }
+
+/* บรรทัด "ดูรายละเอียด" ตาม Design: เต็มความกว้างการ์ด สูง 52px ข้อความกึ่งกลางแนวตั้ง ไม่มีที่ว่างใต้แถว */
+.group[data-scope="my"] { padding-bottom: 0 !important; overflow: hidden; }
+.group[data-scope="my"] > .sumline { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; width: calc(100% + 32px); height: 52px; min-height: 0; margin: 4px -16px 0; padding: 0 16px !important; line-height: 1.2; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.group[data-scope="my"] > .sumline .chev { width: 28px; height: 28px; }
+.group[data-scope="my"] > .sumline .chev svg { width: 16px; height: 16px; }
+
+/* หน้าว่าง: จัดกลางแนวตั้งในพื้นที่ระหว่างแถบชิปกับแถบล่าง */
+.empty { min-height: calc(100vh - var(--hdr-h, 59px) - 70px - var(--tab-h, 58px) - 64px); min-height: calc(100svh - var(--hdr-h, 59px) - 70px - var(--tab-h, 58px) - 64px); justify-content: center; padding: 0 16px 24px; box-sizing: border-box; }
+
+/* หน้าแก้ไข: เส้นแบ่งใต้หัว Lot เหลือเส้นเดียว (ก่อนหน้านี้เส้นล่างของหัวซ้อนกับเส้นบนของรายการแรก) */
+.dcard .dhead + .pblock, .dcard .dhead + .eprow { border-top: 0; margin-top: 0; }

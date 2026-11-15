@@ -95,9 +95,9 @@
     return pick ? '<span class="g-tags"><span class="stage s-ship">' + esc(LAB[pick]) + '</span></span>' : '';
   }
   function stageTagLabel(key, label, billing, code) {
-    if (key === 'new') return label + ' รอบ 1';
-    if (key !== 'ship') return label;
     var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
+    if (key === 'new') return b && b.round1 && b.round1.paid ? 'รอแจ้งยอดรอบ 2' : label + ' รอบ 1'; // ถึงไทยแล้วแต่ร้านยังไม่แจ้งยอดรอบ 2 = รอบ 2
+    if (key !== 'ship') return label;
     return b && b.round2 ? label : 'รอแจ้งยอดรอบ 2';
   }
   function lotPaid(billing, code) {

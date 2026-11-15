@@ -601,7 +601,7 @@
   var SCREENS = {
     loading: function () {
       var card = '<div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-l1"></div><div class="sk sk-l2"></div></div>';
-      return '<div class="sk-wrap" role="status" aria-label="กำลังโหลด"><div class="sk sk-title"></div><div class="sk sk-sub"></div><div class="sk-grid">' + card + card + '</div><p class="center muted sk-txt">กำลังโหลด…</p></div>';
+      return '<div class="sk-wrap" role="status" aria-label="กำลังโหลด"><div class="sk sk-title"></div><div class="sk sk-sub"></div><div class="sk-grid">' + card + card + card + card + card + card + '</div></div>';
     },
 
     error: function () {

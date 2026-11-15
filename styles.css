@@ -1160,3 +1160,6 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .es-ic.es-pay { background: #e6efdc; color: var(--ok); }
 .es-ic.es-verify, .es-ic.es-done { background: var(--tag); color: var(--accent-deep); }
 .es-ic.es-ship, .es-ic.es-inbound { background: #dfeaee; color: #3d5a66; }
+
+.sk-grid { gap: 14px 12px; }
+.sk-title { margin-bottom: 14px; }

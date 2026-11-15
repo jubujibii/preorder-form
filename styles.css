@@ -1163,3 +1163,9 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 
 .sk-grid { gap: 14px 12px; }
 .sk-title { margin-bottom: 14px; }
+
+/* ขนาดการ์ด Lot: กระชับ ไม่มีที่ว่างเกินใต้บรรทัดสรุป */
+.group[data-scope="my"] { padding-bottom: 0; }
+.group[data-scope="my"] > summary { padding: 14px 0 10px; }
+.group[data-scope="my"] > .sumline { padding: 12px 0 12px; min-height: 0; }
+.group[data-scope="my"] > summary .g-meta { color: var(--muted); }

@@ -1065,3 +1065,20 @@ details.group[data-scope="my"][open] { padding-bottom: 14px; }
 .tl .st.done::before, .tl .st.now::before { background: var(--ok); }
 .tl .st.now i { background: var(--accent-dark); box-shadow: 0 0 0 5px var(--accent-soft); }
 .tl .st.now, .tl .st.done { color: var(--ink); font-weight: 600; }
+
+.pay-due { display: inline-block; margin: 0 0 8px; padding: 2px 12px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; font-weight: 600; }
+
+/* ===== หน้าว่าง / คืนเงิน / ยกเลิก (ดีไซน์ใหม่) ===== */
+.empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 32px 16px 12px; text-align: center; }
+.empty::before { margin: 0 0 8px; }
+.empty .es-t { margin: 0; font: 700 22px/1.3 var(--font-display); color: var(--ink); }
+.empty .es-s { margin: 0; max-width: 280px; font-size: 14px; color: var(--muted); }
+.ref-amt { font-size: 34px; font-weight: 700; line-height: 1.2; color: var(--ink); }
+.refundbox.done .ref-amt { color: var(--ok); }
+.cancelled-head { font-weight: 600; }
+.orow.is-cancelled .oname, .orow.is-cancelled .osub { color: var(--muted); }
+
+.dcard.dtl { padding: 16px 8px 4px; }
+.dcard.dtl .tl { display: flex; align-items: flex-start; padding: 0 8px 10px; }
+.tl-cap { margin: 0 0 12px; text-align: center; font-size: 13px; color: var(--muted); }
+.dcard.dtl .tl-cap { margin: 0 0 10px; }

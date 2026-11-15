@@ -31,7 +31,7 @@ function mergeOrderLines(rows) {
   var index = {};
   rows.forEach(function (r) {
     var k = JSON.stringify([r.preorderCode, r.productId, r.productName, r.option, r.status]);
-    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, imageUrl: r.imageUrl || '', optionImageUrl: r.optionImageUrl || '', canCancel: !!r.canCancel, at: r.at || null, qty: 0 }); }
+    if (index[k] === undefined) { index[k] = out.length; out.push({ preorderCode: r.preorderCode, productId: r.productId, productName: r.productName, option: r.option, status: r.status, priceThb: r.priceThb, imageUrl: r.imageUrl || '', optionImageUrl: r.optionImageUrl || '', canCancel: !!r.canCancel, at: r.at || null, etaAt: r.etaAt || '', qty: 0 }); }
     out[index[k]].qty += r.qty;
     if (r.at && (!out[index[k]].at || r.at > out[index[k]].at)) out[index[k]].at = r.at;
   });
@@ -139,11 +139,13 @@ function pendingRefundCount(lines, billing) {
 
 // ยอดค้างชำระจากข้อมูลบิลของหน้า "ออเดอร์ของฉัน" (ไม่นับรอบที่แนบสลิปแล้ว)
 function pendingPayment(billing) {
-  var count = 0, total = 0;
+  var count = 0, total = 0, due = null;
   billing.forEach(function (b) {
-    [b.round1, b.round2].forEach(function (r) { if (r && !r.paid && !r.slipAt) { count++; total += r.totalSatang; } });
+    [b.round1, b.round2].forEach(function (r) {
+      if (r && !r.paid && !r.slipAt) { count++; total += r.totalSatang; if (r.dueAt && (!due || r.dueAt < due)) due = r.dueAt; }
+    });
   });
-  return { count: count, totalSatang: total };
+  return { count: count, totalSatang: total, dueAt: due };
 }
 
 // ลิงก์เปิดแชท LINE OA ของร้าน (เพื่อนของร้านจะเข้าแชท 1:1 ทันที ไม่มีข้อความพิมพ์ให้)

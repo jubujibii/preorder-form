@@ -37,6 +37,42 @@
   function closeText(iso) {
     return new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
   }
+  function dueText(iso) {
+    return new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' น.';
+  }
+  function emptyBlock(title, sub) {
+    return '<div class="center empty"><h2 class="es-t">' + esc(title) + '</h2>' + (sub ? '<p class="es-s">' + esc(sub) + '</p>' : '') + '</div>';
+  }
+  // เส้นไทม์ไลน์ 4 ขั้นของ Lot: ขั้นที่ช้าที่สุดของรายการที่ยังไม่ถูกคืนเงิน; ชำระรอบ 1 แล้วแต่ร้านยังไม่สั่งของ (รับออเดอร์) = ยังไม่ถึงขั้นแรก; ยังไม่ชำระ = ไม่แสดง
+  function lotTimeline(live, paid) {
+    var RANK = { 'รับออเดอร์': -1, 'สั่งของแล้ว': 0, 'ออกจากจีน': 1, 'ถึงไทย': 2, 'แพ็กแล้ว': 3, 'ส่งแล้ว': 3, 'สำเร็จ': 3 };
+    var items = live.filter(function (o) { return o.status !== 'คืนเงิน'; });
+    if (!items.length) return '';
+    var min = 9;
+    for (var i = 0; i < items.length; i++) { var r = RANK[items[i].status]; if (r === undefined) return ''; min = Math.min(min, r); }
+    if (min < 0 && !paid) return '';
+    var names = ['สั่งของแล้ว', 'ออกจากจีน', 'ถึงไทย', 'ส่งแล้ว'], done = items.every(function (o) { return o.status === 'สำเร็จ'; });
+    return '<div class="tl" aria-label="สถานะ: ' + (min < 0 ? 'ชำระแล้ว รอร้านสั่งของ' : names[min]) + '">' + names.map(function (n, k) {
+      var cls = done || k < min ? ' done' : k === min ? ' now' : '';
+      return '<div class="st' + cls + '"><i>' + (done || k < min ? CHECK_ICON : '') + '</i>' + n + '</div>';
+    }).join('') + '</div>' + tlCaption(items, min);
+  }
+  function etaText(day) {
+    var m = String(day).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12)).toLocaleDateString('th-TH', { timeZone: 'UTC', day: 'numeric', month: 'short' }) : '';
+  }
+  // ข้อความใต้ไทม์ไลน์: รอร้านสั่งของ / ออกจากจีน (+ วันที่คาดว่าจะถึง ถ้าทุกรายการมีวันที่ ใช้วันที่ช้าที่สุด)
+  function tlCaption(items, min) {
+    if (min < 0) return '<p class="tl-cap">ชำระแล้ว รอร้านสั่งของจากจีน</p>';
+    if (min !== 1) return '';
+    var etas = items.map(function (o) { return o.etaAt || ''; });
+    var late = etas.every(Boolean) ? etas.slice().sort().pop() : '';
+    return '<p class="tl-cap">ของออกจากจีน กำลังเดินทางมาไทย' + (late ? ' · คาดว่าถึง ' + esc(etaText(late)) : '') + '</p>';
+  }
+  function lotPaid(billing, code) {
+    var b = (billing || []).filter(function (x) { return x.preorderCode === code; })[0];
+    return !!(b && b.round1 && b.round1.paid);
+  }
   function qtyKey(productId, option) { return productId + '\u0001' + option; }
   function productsById() {
     var m = new Map();
@@ -83,15 +119,15 @@
     if (params.get('optimg') && products[0]) products[0].optionImages = [products[0].imageUrl, '', products[0].imageUrl];
     var res;
     products.forEach(function (x) { x.category = /นอน/.test(x.name) ? 'ที่นอน' : /ของเล่น/.test(x.name) ? 'ของเล่น' : 'อาหาร'; });
-    if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products, pendingPay: params.get('pay') === '1' ? { count: 2, totalSatang: 83000 } : { count: 0, totalSatang: 0 } };
+    if (p.action === 'bootstrap') res = { ok: true, registered: mockDb.registered, memberCode: mockDb.registered ? mockDb.member : undefined, products: products, pendingPay: params.get('pay') === '1' ? { count: 2, totalSatang: 83000, dueAt: new Date(Date.now() + 26 * 3600 * 1000).toISOString() } : { count: 0, totalSatang: 0 } };
     else if (p.action === 'register') { mockDb.registered = true; res = { ok: true, memberCode: mockDb.member }; }
     else if (p.action === 'placeOrder') {
       if (params.get('fail') === '1') { params.delete('fail'); res = { ok: false, error: 'server_error', message: 'x' }; }
       else { mockDb.orders = mockDb.orders.concat(p.lines.map(function (l) { return { productId: l.productId, option: l.option, qty: l.qty, status: 'รับออเดอร์', at: new Date().toISOString() }; })); res = { ok: true, goodsTotalSatang: p.lines.reduce(function (s, l) { var pr = products.filter(function (x) { return x.productId === l.productId; })[0]; return s + unitPriceThb(pr, l.option) * l.qty * 100; }, 0) }; }
     } else if (p.action === 'myOrders') {
-      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
+      res = { ok: true, orders: mockDb.orders.map(function (l) { return { preorderCode: '090426', productId: l.productId, productName: l.productId === '090426-P01' ? 'ที่นอนแมวทรงโดนัท' : 'ของเล่นกระดิ่งปลาทูน่า', option: l.option, qty: l.qty, status: l.status || 'รับออเดอร์', priceThb: l.productId === '090426-P01' ? 66 : 58, imageUrl: l.productId === '090426-P01' && products[0] ? products[0].imageUrl : '', at: l.at || null, etaAt: l.status === 'ออกจากจีน' && !params.get('noeta') ? '2026-11-20' : '', canCancel: (l.status || 'รับออเดอร์') === 'รับออเดอร์' }; }),
         customer: { recipientName: 'Kunyakrit Changhin (Mint)', phone: '081 234 5678', address: '123/45 ซ.สุขุมวิท 21 เขตวัฒนา กรุงเทพฯ 10110' },
-        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null }, round2: null }], paymentInfo: 'ธนาคารตัวอย่าง\nเลขที่บัญชี 123-4-56789-0\nชื่อบัญชี ทดสอบ' };
+        billing: [{ preorderCode: '090426', orderNo: '090426-012', round1: { totalSatang: 14400, paid: false, slipAt: mockDb.slip[1] || null, dueAt: new Date(Date.now() + 26 * 3600 * 1000).toISOString() }, round2: null }], paymentInfo: 'ธนาคารตัวอย่าง\nเลขที่บัญชี 123-4-56789-0\nชื่อบัญชี ทดสอบ' };
       if (params.get('nobill')) res.billing = [];
       if (params.get('refund')) {
         res.billing[0].round1 = { totalSatang: 54000, paid: true, slipAt: null };
@@ -171,7 +207,7 @@
   function payBanner() {
     var p = S.my && S.my.billing ? pendingPayment(S.my.billing) : S.pending;
     if (!p || !p.count) return '';
-    return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><span class="pb-k">ยอดที่ต้องชำระ</span><strong>' + baht(p.totalSatang) + '</strong><span class="pb-s">' + p.count + ' รายการรอชำระ</span></div>' +
+    return '<div class="paybanner" role="status"><div class="pb-card"><div class="pb-txt"><span class="pb-k">ยอดที่ต้องชำระ</span><strong>' + baht(p.totalSatang) + '</strong><span class="pb-s">' + p.count + ' รายการ' + (p.dueAt ? ' · โอนภายใน ' + esc(dueText(p.dueAt)) : ' รอชำระ') + '</span></div>' +
       '<button type="button" class="btn pb-btn" data-act="my">ชำระ / แนบสลิป</button></div></div>';
   }
   var CHECK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
@@ -543,8 +579,8 @@
         '<form id="regform" novalidate>' +
         field('recipientName', 'ชื่อผู้รับ', '<input' + attrs('recipientName') + ' autocomplete="name" value="' + esc(f.recipientName) + '">') +
         field('phone', 'เบอร์โทร', '<input' + attrs('phone') + ' type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone) + '">') +
-        field('address', 'ที่อยู่จัดส่ง', '<textarea' + attrs('address') + ' autocomplete="street-address">' + esc(f.address) + '</textarea>') +
-        field('oldCode', 'รหัสสมาชิกเดิม', '<input' + attrs('oldCode') + ' value="' + esc(f.oldCode) + '">', true) +
+        field('address', 'ที่อยู่จัดส่ง', '<textarea' + attrs('address') + ' placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์" autocomplete="street-address">' + esc(f.address) + '</textarea>') +
+        field('oldCode', 'รหัสสมาชิกเดิม', '<input' + attrs('oldCode') + ' placeholder="P2P-N00000" value="' + esc(f.oldCode) + '">' + '<p class="small muted">ถ้าเคยสั่งกับร้านมาก่อน ใส่รหัสเดิมได้</p>', true) +
         '<button class="btn primary block" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'บันทึกและเริ่มสั่ง') + '</button>' +
         '</form>';
     },
@@ -601,7 +637,7 @@
       var d = S.my;
       var html = '<h1 class="sr-only">ออเดอร์ของฉัน</h1>' + errBanner();
       if (!d) return html + '<p class="center muted">กำลังโหลด…</p>';
-      if (!d.orders.length) return html + '<p class="muted">ยังไม่มีออเดอร์</p><button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
+      if (!d.orders.length) return html + '' + emptyBlock('ยังไม่มีออเดอร์', 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย ออเดอร์ที่สั่งแล้วจะมาอยู่ที่นี่') + '<button class="btn primary block" data-act="more">เริ่มสั่งของ</button>';
       var merged = mergeOrderLines(d.orders);
       var counts = tabCounts(merged, d.billing);
       if (!S.myTab) S.myTab = (counts.pay > 0 || counts.verify > 0) ? 'pay' : counts.new > 0 ? 'new' : counts.ship > 0 ? 'ship' : counts.inbound > 0 ? 'inbound' : 'all';
@@ -648,19 +684,6 @@
         if (keys.length > 2) chips += '<button type="button" class="stage s-more" data-act="tags" data-code="' + esc(code) + '" aria-expanded="' + open + '" aria-label="' + (open ? 'ย่อสถานะ' : 'ดูสถานะทั้งหมด') + '">' + (open ? 'ย่อ' : '+' + (keys.length - 1)) + '</button>';
         return '<span class="g-tags' + (open && keys.length > 2 ? ' is-open' : '') + '">' + chips + '</span>';
       }
-      // เส้นไทม์ไลน์ 4 ขั้นของ Lot: ขั้นที่ช้าที่สุดของรายการที่ยังไม่ถูกคืนเงิน/ยกเลิก (ยังเป็น รับออเดอร์ = ไม่แสดง)
-      function lotTimeline(live) {
-        var RANK = { 'สั่งของแล้ว': 0, 'ออกจากจีน': 1, 'ถึงไทย': 2, 'แพ็กแล้ว': 3, 'ส่งแล้ว': 3, 'สำเร็จ': 3 };
-        var items = live.filter(function (o) { return o.status !== 'คืนเงิน'; });
-        if (!items.length) return '';
-        var min = 9;
-        for (var i = 0; i < items.length; i++) { var r = RANK[items[i].status]; if (r === undefined) return ''; min = Math.min(min, r); }
-        var names = ['สั่งของแล้ว', 'ออกจากจีน', 'ถึงไทย', 'ส่งแล้ว'], done = items.every(function (o) { return o.status === 'สำเร็จ'; });
-        return '<div class="tl" aria-label="สถานะ: ' + names[min] + '">' + names.map(function (n, k) {
-          var cls = done || k < min ? ' done' : k === min ? ' now' : '';
-          return '<div class="st' + cls + '"><i>' + (done || k < min ? CHECK_ICON : '') + '</i>' + n + '</div>';
-        }).join('') + '</div>';
-      }
       function renderGroups(list) {
         var html = '';
         var codes = newestFirstCodes(list);
@@ -672,7 +695,7 @@
         var pieces = (live.length ? live : mine).reduce(function (n, o) { return n + o.qty; }, 0);
         // ยอดรวมค่าสินค้าของ Lot นี้ (ไม่นับที่ยกเลิก/คืนเงิน; ยังไม่รวมค่าส่ง)
         var lotSatang = live.filter(function (o) { return o.status !== 'คืนเงิน' && o.priceThb != null; }).reduce(function (n, o) { return n + o.priceThb * o.qty * 100; }, 0);
-        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live) : '');
+        html += '<details class="group" data-scope="my" data-code="' + esc(code) + '"' + ((S.openMy[code] === undefined ? (S.myTab === 'pay' || S.myTab === 'refund') : S.openMy[code]) ? ' open' : '') + '><summary><span class="g-title">Lot ' + esc(code) + '</span><span class="g-meta">' + pieces + ' ชิ้น' + (lotSatang > 0 ? '<span class="g-sep"></span><strong class="g-sum">' + baht(lotSatang) + '</strong>' : '') + '</span>' + (S.myTab === 'all' ? stageTags(mine, code) : '') + '</summary>' + (S.myTab === 'all' ? lotTimeline(live, lotPaid(d.billing, code)) : '');
         var b = d.billing.filter(function (x) { return x.preorderCode === code; })[0];
         if (b && live.length && (S.myTab === 'all' || S.myTab === 'pay')) {
           html += '<div class="billbox' + ((b.round1 || b.round2) && [b.round1, b.round2].every(function (r) { return !r || r.paid; }) ? ' all-paid' : '') + '"><div class="order-no"><span class="muted">เลขออเดอร์</span><strong>' + esc(b.orderNo) + '</strong></div>';
@@ -680,9 +703,10 @@
             var r = x[1];
             if (!r) return;
             var sk = code + '|' + x[2];
+            var dueLine = !r.paid && !r.slipAt && r.dueAt ? '<div class="pay-due">โอนภายใน ' + esc(dueText(r.dueAt)) + '</div>' : '';
             var badge = r.paid ? '<span class="badge ok">จ่ายแล้ว</span>' : r.slipAt ? '<span class="badge warn">แจ้งโอนแล้ว</span>' : '<span class="badge">รอชำระ</span>';
             html += '<div class="pay-round"><div class="pay-top"><div class="pay-name">ยอดโอน' + x[0] + (x[2] === 1 ? '<small>ค่าสินค้า + ส่งในจีน</small>' : '') + '</div>' + badge + '</div>' +
-              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' +
+              '<div class="pay-amt">' + baht(r.totalSatang) + '</div>' + dueLine +
               (x[2] === 1 && lotSatang > 0 && r.totalSatang > lotSatang ? '<div class="pay-split"><div><span>ค่าสินค้า</span><b>' + baht(lotSatang) + '</b></div><div><span>ค่าส่งในจีน</span><b>' + baht(r.totalSatang - lotSatang) + '</b></div></div>' : '');
             if (!r.paid) {
               var busy = S.slipBusy === sk;
@@ -762,14 +786,16 @@
       });
         return html;
       }
-      var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง/จัดส่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์ กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
-      var empty = '<p class="muted center empty">' + esc(emptyMsg[S.myTab] || 'ไม่มีรายการในหัวข้อนี้') + '</p>';
+      var emptyMsg = { pay: 'ไม่มียอดที่ต้องชำระ', verify: 'ไม่มีสลิปที่รอตรวจสอบ', 'new': 'ไม่มีออเดอร์ที่รอแจ้งยอด', ship: 'ยังไม่มีสินค้าที่อยู่ระหว่างสั่ง/จัดส่ง', inbound: 'ยังไม่มีพัสดุที่กำลังส่งถึงคุณ', done: 'ยังไม่มีออเดอร์ที่สำเร็จ', refund: 'ไม่มีรายการคืนเงิน', cancel: 'ไม่มีรายการที่ยกเลิก', all: 'ยังไม่มีออเดอร์' };
+      var emptySub = { pay: 'เมื่อร้านแจ้งยอดโอนรอบ 1 หรือรอบ 2 ยอดจะขึ้นที่นี่ พร้อมปุ่มแนบสลิป', verify: 'สลิปที่แนบแล้วและรอร้านตรวจ จะขึ้นที่นี่', 'new': 'ออเดอร์ที่ร้านยังไม่แจ้งยอด จะขึ้นที่นี่', ship: 'หลังชำระยอดรอบ 1 ร้านจะสั่งของจากจีนให้ แล้วสถานะจะขึ้นที่นี่', inbound: 'เมื่อของออกจากจีนและกำลังเดินทางมาไทย จะขึ้นที่นี่', done: 'ออเดอร์ที่ได้รับของครบแล้ว จะย้ายมาอยู่ที่นี่', refund: 'ถ้ามีสินค้าที่ร้านจีนไม่ส่ง ยอดคืนจะแสดงที่นี่', cancel: 'รายการที่ถูกยกเลิกจะแสดงที่นี่', all: 'กดปุ่มด้านล่างเพื่อเริ่มสั่งได้เลย' };
+      function emptyHtml(k, title) { return emptyBlock(title || emptyMsg[k] || 'ไม่มีรายการในหัวข้อนี้', emptySub[k]); }
+      var empty = emptyHtml(S.myTab);
       // แท็บที่แบ่งหัวข้อย่อยเอง (รอแจ้งยอด/ที่ต้องจัดส่ง) ไม่ต้องมีหัวข้อซ้อนกันสองชั้น
       if (!((S.myTab === 'new' || S.myTab === 'ship') && shown.length)) html += '<h2 class="tab-title"><span class="tab-dot"></span>' + esc(labelOf[S.myTab] || 'ทั้งหมด') + '</h2>';
       if (S.myTab === 'pay') {
         // รอตรวจสอบ (แนบสลิปแล้ว) วางต่อจากที่ต้องชำระในหน้าเดียวกัน ไม่รวมในตัวเลขของที่ต้องชำระ
         var waiting = filterMyOrders(merged, d.billing, 'verify');
-        html += shown.length ? renderGroups(shown) : (waiting.length ? '<p class="muted center empty">ไม่มียอดที่ต้องชำระ</p>' : empty);
+        html += shown.length ? renderGroups(shown) : (waiting.length ? emptyHtml('pay', 'ไม่มียอดที่ต้องชำระ') : empty);
         if (waiting.length) html += '<h2 class="tab-title"><span class="tab-dot wait"></span>รอตรวจสอบ</h2><p class="small muted sec-note">แนบสลิปแล้ว รอร้านตรวจสอบยอด</p>' + renderGroups(waiting);
       } else if (S.myTab === 'new' && shown.length) {
         // รอแจ้งยอด แยกเป็นรอบ 1 (สั่งแล้ว รอร้านแจ้งยอดสินค้า+ส่งจีน) และรอบ 2 (ของถึงไทยแล้ว รอร้านแจ้งค่านำเข้า+ส่งไทย)
@@ -807,6 +833,7 @@
       }).join('');
       return '<section class="dcard dhead"><span class="dico"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/><ellipse cx="12.5" cy="7" rx="3" ry="4.2"/><ellipse cx="19.5" cy="7" rx="3" ry="4.2"/><path d="M16 14c-5 0-9 4.5-9 8.5C7 26 9.5 28 12 28c1.8 0 2.6-.9 4-.9s2.2.9 4 .9c2.5 0 5-2 5-5.5 0-4-4-8.5-9-8.5z"/></svg></span>' +
         '<div><div class="dlot">Lot ' + esc(code) + '</div><div class="dmeta">' + pieces + ' ชิ้น</div><span class="stage dchip">' + esc(lotStageLabel(code)) + '</span></div></section>' +
+        (function () { var t = lotTimeline(live, lotPaid(d.billing, code)); return t ? '<section class="dcard dtl">' + t + '</section>' : ''; })() +
         '<section class="dcard"><h2 class="dtitle">รายการสินค้า (' + live.length + ' รายการ)</h2>' + rows +
         '<div class="lotfoot"><span>รวม ' + live.length + ' รายการ (' + pieces + ' ชิ้น)</span><span class="lf-r">ยอดรวม <strong>' + baht(total) + '</strong></span></div></section>' +
         (me && (me.recipientName || me.phone || me.address) ? '<section class="dcard"><h2 class="dtitle">ข้อมูลจัดส่ง</h2>' +

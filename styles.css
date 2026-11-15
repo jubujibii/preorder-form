@@ -1254,3 +1254,6 @@ body[data-screen="detail"]:has(.dpay-bar) #app { padding-bottom: calc(96px + env
 .group > .billbox, .group > .refundbox { margin-bottom: 10px; }
 .group > .billbox:last-of-type, .group > .refundbox:last-of-type { margin-bottom: 14px; }
 .refundbox .ref-order { display: none; } /* เลขออเดอร์ซ้ำกับหัวกล่องยอดโอน */
+
+/* ปุ่มแนบสลิปหน้ารายละเอียด: ติดขอบล่างจอจริง (หน้านี้ไม่มีแถบเมนูล่าง) ไม่ลอย */
+body[data-screen="detail"] .dpay-bar { bottom: 0; left: 0; right: 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-radius: 0; box-shadow: 0 -1px 0 var(--line); border-top: 0; }
